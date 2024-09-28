@@ -3,6 +3,16 @@
 version = 3
 
 [[package]]
+name = "a-way-back-home"
+version = "0.1.0"
+dependencies = [
+ "avian2d",
+ "bevy",
+ "rand",
+ "rand_chacha",
+]
+
+[[package]]
 name = "ab_glyph"
 version = "0.2.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2147,16 +2157,6 @@ name = "hexf-parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
-
-[[package]]
-name = "i-hope-this-becomes-something"
-version = "0.1.0"
-dependencies = [
- "avian2d",
- "bevy",
- "rand",
- "rand_chacha",
-]
 
 [[package]]
 name = "image"
