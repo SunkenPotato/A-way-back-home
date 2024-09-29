@@ -1,8 +1,14 @@
-use bevy::{prelude::{Commands, Entity, Query, Res, Transform, With}, time::Time};
+use bevy::{
+    prelude::{Commands, Entity, Query, Res, Transform, With},
+    time::Time,
+};
 
 use crate::components::{Grounded, Health, Killable, Moveable, Speed, Velocity};
 
-pub fn moveable_system(mut query: Query<(&Velocity, &mut Transform, &Speed), With<Moveable>>, time: Res<Time>) {
+pub fn moveable_system(
+    mut query: Query<(&Velocity, &mut Transform, &Speed), With<Moveable>>,
+    time: Res<Time>,
+) {
     let delta = time.delta_seconds();
 
     for (velocity, mut transform, speed) in &mut query {
@@ -13,6 +19,9 @@ pub fn moveable_system(mut query: Query<(&Velocity, &mut Transform, &Speed), Wit
 
         translation.x += added_v_x;
         translation.y += added_v_y;
+
+        //info(added_v_x);
+        //info(added_v_y);
     }
 }
 
