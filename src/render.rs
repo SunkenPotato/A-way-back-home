@@ -24,7 +24,7 @@ pub mod camera {
 }
 
 pub mod sprite {
-    use bevy::{app::Plugin, asset::AssetServer, prelude::{Commands, Entity, Query, Res, With}, sprite::SpriteBundle};
+    use bevy::{app::Plugin, asset::AssetServer, prelude::{Commands, Entity, Query, Res}};
 
     use crate::components::component::{Identifier, WithSprite};
 
@@ -37,6 +37,7 @@ pub mod sprite {
     }
 
     impl SpritePlugin {
+        #[allow(unused)]
         fn apply_sprites(mut commands: Commands, all: Query<(&Identifier<'static>, Entity), WithSprite>, asset_server: Res<AssetServer>) {
             for (identifier, entity) in &all {
                 todo!()
