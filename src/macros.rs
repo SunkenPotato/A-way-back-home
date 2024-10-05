@@ -1,19 +1,26 @@
-
-/// ## Emulate ternary operations in Rust 
-/// Usage:
-/// ```rs
-/// 
-/// let x = 5;
-/// let condition = ternary!(x > 0; true, false);
-/// assert_eq!(condition, true);
-/// ```
 #[macro_export]
 macro_rules! ternary {
-    ($cond:expr; $then:expr, $else:expr) => {
+    ($cond:expr; $t:expr, $f:expr) => {
         if $cond {
-            $then
-        } else {
-            $else
-        }
+            $t
+        } else { $f }
+    }
+}
+
+#[macro_export]
+macro_rules! optional_code {
+    ($env_name:expr; $($code:block)*) => {
+        if let Some(_v) = option_env!($env_name) {
+            $(
+                $code
+            )*
+        } else { () }
+    };
+}
+
+#[macro_export]
+macro_rules! identifier {
+    ($i:expr) => {
+        Identifier($i)
     };
 }

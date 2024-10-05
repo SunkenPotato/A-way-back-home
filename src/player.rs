@@ -1,103 +1,108 @@
-use avian2d::prelude::{ColliderConstructor, Restitution, RigidBody};
-use bevy::{
-    app::{Plugin, Update},
-    asset::AssetServer,
-    input::ButtonInput,
-    math::{Quat, Vec2, Vec3},
-    prelude::{Bundle, IntoSystemConfigs, KeyCode, Query, Res, Transform, With},
-    sprite::SpriteBundle,
-    utils::default,
-};
+use avian2d::prelude::{Collider, RigidBody};
+use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Handle}, input::ButtonInput, math::{Quat, Vec2, Vec3}, prelude::{Commands, Component, Image, IntoSystemConfigs, KeyCode, Query, Res, Transform, With}, sprite::SpriteBundle, utils::default};
+use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
-use crate::components::{Direction, Grounded, Health, Moveable, Player, Speed, Velocity};
-
-pub const DEFAULT_PLAYER_SPRITE: &'static str = "sprites/player/claire-left.png";
-pub const PLAYER_SCALE: f32 = 4.;
-pub const PLAYER_SIZE: (f32, f32) = (16., 19.);
+use crate::components::component::Velocity;
 
 pub struct PlayerPlugin;
 
+const PLAYER_SPRITE_PATH: &str = "sprites/player/claire-left.png";
+const PLAYER_SCALE: Vec3 = Vec3::from_slice(&[4.5, 4.5, 0.]);
+const PLAYER_SIZE: (f32, f32) = (19. * PLAYER_SCALE.x, 16. * PLAYER_SCALE.y);
+
+#[derive(Component, Default)]
+pub struct Player {
+    direction: Direction
+}
+
+#[derive(Default)]
+pub enum Direction {
+    L, 
+    #[default]
+    R
+}
+
+#[derive(Component)]
+pub struct SpeedMultiplier(Vec3);
+
+impl Default for SpeedMultiplier {
+    fn default() -> Self {
+        Self(Vec3::splat(1.))
+    }
+}
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(
-            Update,
-            (Self::movement_system, Self::grounded_rotation_system).chain(),
-        );
+        app.add_systems(Startup, Self::spawn_player);
+        app.add_systems(Update, (Self::move_controller).chain());
     }
 }
 
 impl PlayerPlugin {
-    pub fn movement_system(
-        mut query: Query<(&mut Velocity, &Grounded, &mut Transform), With<Player>>,
-        kb_input: Res<ButtonInput<KeyCode>>,
-    ) {
-        for (mut player, grounded, mut transform) in &mut query {
-            player.0.x = if kb_input.pressed(KeyCode::KeyD) {
-                1.
-            } else if kb_input.pressed(KeyCode::KeyA) {
-                -1.
-            } else {
-                0.
-            };
+    fn move_controller(mut query: Query<(&mut TnuaController, &SpeedMultiplier), With<Player>>, keyboard: Res<ButtonInput<KeyCode>>) {
 
-            if kb_input.pressed(KeyCode::Space) && grounded.0 {
-                player.0.y = 1.
-            } else {
-                player.0.y = 0.
+        for (mut controller, speed_multiplier) in &mut query { 
+            
+            let mut direction = Vec3::ZERO;
+            let multiplier = speed_multiplier.0;
+
+            if keyboard.pressed(KeyCode::Space) {
+
+                direction += Vec3::Y * multiplier;
+            }
+            if keyboard.pressed(KeyCode::KeyA) {
+            
+                direction -= Vec3::X * multiplier;
+            }
+            if keyboard.pressed(KeyCode::KeyD) {
+        
+                direction += Vec3::X * multiplier;
             }
 
-            if kb_input.pressed(KeyCode::KeyR) && !grounded.0 {
-                transform.rotation.z = 0.;
-                transform.translation.y += 0.3;
+            // Feed the basis every frame. Even if the player doesn't move - just use `desired_velocity:
+            // Vec3::ZERO`. `TnuaController` starts without a basis, which will make the character collider
+            // just fall.
+            controller.basis(TnuaBuiltinWalk {
+                // The `desired_velocity` determines how the character will move.
+                desired_velocity: direction.normalize_or_zero() * 10.0 + 1.,
+                // The `float_height` must be greater (even if by little) from the distance between the
+                // character's center and the lowest point of its collider.
+                float_height: 1.5,
+                // `TnuaBuiltinWalk` has many other fields for customizing the movement - but they have
+                // sensible defaults. Refer to the `TnuaBuiltinWalk`'s documentation to learn what they do.
+                ..Default::default()
+            });
+
+            // Feed the jump action every frame as long as the player holds the jump button. If the player
+            // stops holding the jump button, simply stop feeding the action.
+            if keyboard.pressed(KeyCode::Space) {
+                controller.action(TnuaBuiltinJump {
+                    // The height is the only mandatory field of the jump button.
+                    height: 4.0,
+                    // `TnuaBuiltinJump` also has customization fields with sensible defaults.
+                    ..Default::default()
+                });
             }
         }
+
     }
 
-    pub fn construct_default_player(
-        asset_server: &Res<AssetServer>,
-        x: f32,
-        y: f32,
-    ) -> impl Bundle {
-        (
+    fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+
+        let handle: Handle<Image> = asset_server.load(PLAYER_SPRITE_PATH);
+
+        commands.spawn((
             SpriteBundle {
-                texture: asset_server.load(DEFAULT_PLAYER_SPRITE),
-                transform: Transform::from_scale(Vec3::splat(PLAYER_SCALE))
-                    .with_translation(Vec3 { x, y, z: 0. }),
+                texture: handle,
+                transform: Transform::from_xyz(0., 0., 0.).with_scale(Vec3::splat(PLAYER_SCALE.x)).with_rotation(Quat::IDENTITY),
                 ..default()
             },
             Player::default(),
-            Speed::default(2.0),
-            Health(20.),
-            Direction::L,
-            ColliderConstructor::Rectangle {
-                x_length: PLAYER_SIZE.0,
-                y_length: PLAYER_SIZE.1,
-            },
+            TnuaControllerBundle::default(),
             RigidBody::Dynamic,
-            Velocity(Vec2::splat(0.)),
-            Moveable,
-            Grounded(true),
-            Restitution::PERFECTLY_INELASTIC,
-        )
-    }
-
-    pub fn grounded_rotation_system(mut query: Query<(&Transform, &mut Grounded), With<Moveable>>) {
-        for (transform, mut grounded) in &mut query {
-            let yaw_deg = Self::quaternion_to_euler(transform.rotation);
-
-            grounded.0 = crate::ternary!(yaw_deg > 5. + f32::EPSILON || yaw_deg == 180. + f32::EPSILON; false, true);
-        }
-    }
-
-    fn quaternion_to_euler(quat: Quat) -> f32 {
-        let (x, y, z, w) = (quat.x, quat.y, quat.z, quat.w);
-
-        let sin_yaw = 2.0 * (w * z + x * y);
-        let cos_yaw = 1.0 - 2.0 * (y * y + z * z);
-        let yaw = sin_yaw.atan2(cos_yaw);
-
-        let yaw_deg = yaw.to_degrees();
-
-        yaw_deg
+            Collider::rectangle(PLAYER_SIZE.0, PLAYER_SIZE.1),
+            Velocity(Vec2::ZERO),
+            SpeedMultiplier::default()
+        ));
     }
 }
