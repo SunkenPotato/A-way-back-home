@@ -8,19 +8,10 @@ macro_rules! ternary {
 }
 
 #[macro_export]
-macro_rules! optional_code {
-    ($env_name:expr; $($code:block)*) => {
-        if let Some(_v) = option_env!($env_name) {
-            $(
-                $code
-            )*
-        } else { () }
-    };
-}
-
-#[macro_export]
 macro_rules! identifier {
-    ($i:expr) => {
-        Identifier($i)
+    ($identifier:ident, $string_i:expr) => {
+        
+
+        pub const $identifier: LazyLock<Identifier> = LazyLock::new(|| Identifier($string_i.to_string()));
     };
 }

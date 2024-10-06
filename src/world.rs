@@ -3,9 +3,9 @@ pub mod loader {
     use std::{fs::File, io::Write as _, num::NonZero, sync::LazyLock};
 
     use avian2d::prelude::{ColliderConstructor, RigidBody};
-    use bevy::{app::{App, Plugin, PreStartup, Startup}, asset::AssetServer, log::error, math::Vec3, prelude::{AppTypeRegistry, Commands, Res, Resource, Transform, World}, scene::{DynamicScene, DynamicSceneBundle}, tasks::IoTaskPool, utils::default};
+    use bevy::{app::{App, Plugin, PreStartup, Startup}, asset::{AssetServer, Handle}, log::error, math::Vec3, prelude::{AppTypeRegistry, Commands, Res, Resource, Transform, World}, scene::{DynamicScene, DynamicSceneBundle}, tasks::IoTaskPool, utils::default};
 
-    use crate::{components::component::{Identifier, Tile, Velocity}, optional_code};
+    use crate::components::component::{Identifier, SpriteMarker, Tile, Velocity};
 
     use super::tile;
 
@@ -19,6 +19,9 @@ pub mod loader {
     #[derive(Resource, Clone)]
     pub struct SavePath(String);
 
+    #[derive(Resource, Debug)]
+    pub struct DSHandle(pub Handle<DynamicScene>);
+
     impl Plugin for WorldPlugin {
         fn build(&self, app: &mut bevy::prelude::App) {
             add_type_reg(app);
@@ -27,26 +30,35 @@ pub mod loader {
 
             app.add_systems(Startup, Self::load_world);
 
-            optional_code!("DEV_MODE"; {
+            if let Some(_) = option_env!("DEV_MODE") {
                 app.add_systems(PreStartup, Self::save_world);
-            });
+            };
         }
     }
 
     fn add_type_reg(app: &mut App) -> &mut App {
-        app.register_type::<Tile>();
-        app.register_type::<Identifier>();
-        app.register_type::<Velocity>();
+        app
+            .register_type::<Tile>()
+            .register_type::<Identifier>()
+            .register_type::<Velocity>()
+            .register_type::<SpriteMarker>()
+
+            .register_type::<ColliderConstructor>();
 
         app
     }
 
     impl WorldPlugin {
         fn load_world(mut commands: Commands, asset_server: Res<AssetServer>, sp: Res<SavePath>) {
+            let ds_handle = asset_server.load(sp.0.clone());
+
+            commands.insert_resource(DSHandle(ds_handle.clone()));
+            
             commands.spawn(DynamicSceneBundle {
-                scene: asset_server.load(sp.0.clone()),
+                scene: ds_handle,
                 ..default()
             });
+
         }
 
         fn save_world(world: &mut World) {
@@ -69,17 +81,23 @@ pub mod loader {
             /* SPAWN ELEMENTS HERE */
             // BEGIN
             for x in 0..10 {
-                let x_pos = (x as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE);
+                let x_pos = (x as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.x);
 
                 scn_world.spawn((
                     Tile,
-                    tile::idents::DIRT,
+                    tile::idents::DIRT.clone(),
                     ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0, y_length: super::tile::TILE_SIZE.1 },
                     RigidBody::Static,
-                    Transform::from_translation(x_pos)
-                        .with_scale(super::tile::TILE_SCALE)
+                    Transform::from_xyz(x_pos, -64., 0.)
+                        .with_scale(super::tile::TILE_SCALE),
+                    SpriteMarker
                 ));
             }
+            // END
+
+            /* INSERT RESOURCES HERE */
+            // BEGIN
+            
             // END
 
             let scn = DynamicScene::from_world(&scn_world);
@@ -188,11 +206,20 @@ pub mod tile {
 
     // Define Tile Identifiers here
     // BEGIN
+
+    /// The format for Identifiers is:
+    /// ```
+    /// entity.type.name
+    /// ```
+    /// 
+    /// I'm not explaning myself in a private project 
+    ///
     pub mod idents {
         use crate::{components::component::Identifier, identifier};
+        use std::sync::LazyLock;
 
-        pub const DIRT: Identifier = identifier!("tile.ter.dirt");
-        pub const GRASS: Identifier = identifier!("tile.dec.grass");
-
+        identifier!(DIRT, "tile.ter.dirt");
+        identifier!(GRASS, "tile.dec.grass");
     }
+    // END
 }
