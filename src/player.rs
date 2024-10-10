@@ -1,113 +1,138 @@
+use core::f32;
+
 use avian2d::prelude::{Collider, RigidBody};
-use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Handle}, input::ButtonInput, log::info, math::{Quat, Vec2, Vec3}, prelude::{Commands, Component, Image, IntoSystemConfigs, KeyCode, Query, Res, Transform, With}, sprite::SpriteBundle, utils::default};
+use bevy::{app::{Plugin, Update}, asset::{AssetServer, Assets}, input::ButtonInput, log::warn, math::{Quat, Vec2, Vec3}, prelude::{Commands, Component, EventReader, IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform, With}, sprite::{Sprite, SpriteBundle}, utils::default};
 use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
-use crate::components::component::Velocity;
+use crate::{components::{asset::IndexAsset, component::{MovementMultiplier, Velocity}}, identifier, render::sprite::{SPILoaded, SpriteIndexResource}};
 
 pub struct PlayerPlugin;
 
-const PLAYER_SPRITE_PATH: &str = "sprites/player/claire-left.png";
-const PLAYER_SCALE: Vec3 = Vec3::from_slice(&[4.5, 4.5, 0.]);
-const PLAYER_SIZE: (f32, f32) = (16., 19.);
+identifier!(PLAYER_STILL, "entity.player.still");
 
-const DEF_PLAYER_SPEED: f32 = 20.;
+#[derive(Resource)]
+#[allow(unused)]
+pub struct PlayerResource {
+    pub size_x: f32,
+    pub size_y: f32,
+    pub scale: Vec3,
+    pub scale_f32: f32
+}
+
+impl Default for PlayerResource {
+    fn default() -> Self {
+        Self {
+            size_x: 16.,
+            size_y: 19.,
+            scale: Vec3::from_slice(&[4.5, 4.5, 0.]),
+            scale_f32: 4.5
+        }
+    }
+}
 
 #[derive(Component, Default)]
+#[allow(unused)]
 pub struct Player {
     direction: Direction
 }
 
-#[derive(Default)]
+#[derive(Component, Default, PartialEq, Eq)]
 pub enum Direction {
     L, 
     #[default]
     R
 }
 
-#[derive(Component)]
-pub struct SpeedMultiplier(Vec3);
-
-impl Default for SpeedMultiplier {
-    fn default() -> Self {
-        Self(Vec3::splat(10.))
-    }
-}
-
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Startup, Self::spawn_player);
+        app.init_resource::<PlayerResource>();
+
+        app.add_systems(Update, Self::spawn_player);
         app.add_systems(Update, (Self::move_controller).chain());
     }
 }
 
 impl PlayerPlugin {
-    #[warn(unstable_features, reason = "Unfinished")]
+    
     fn move_controller(
-        mut query: Query<(&mut TnuaController), With<Player>>, 
+        mut query: Query<(&mut TnuaController, &mut Sprite, &mut Direction, &MovementMultiplier), With<Player>>, 
         keyboard: Res<ButtonInput<KeyCode>>
     ) {
-        let Ok(mut controller) = query.get_single_mut() else {
-            info!("ctrl not found");
-            return;
-        };
-    
-        let mut direction = Vec3::ZERO;
-    
-        if keyboard.pressed(KeyCode::ArrowUp) {
-            direction -= Vec3::Z;
+        let Ok((mut controller, mut sprite, mut direction, multiplier)) = query.get_single_mut() else { return; };
+
+        let mut move_direction = Vec3::ZERO;
+
+        if keyboard.pressed(KeyCode::KeyA) {
+            move_direction -= Vec3::X;
+            if let Direction::R = direction.as_ref() { 
+                *direction = Direction::L;
+                sprite.flip_x = true;
+            }
         }
-        if keyboard.pressed(KeyCode::ArrowDown) {
-            direction += Vec3::Z;
+        if keyboard.pressed(KeyCode::KeyD) {
+            move_direction += Vec3::X;
+            if let Direction::L = direction.as_ref() {
+                *direction = Direction::R;
+                sprite.flip_x = false;
+            }
         }
-        if keyboard.pressed(KeyCode::ArrowLeft) {
-            direction -= Vec3::X;
-        }
-        if keyboard.pressed(KeyCode::ArrowRight) {
-            direction += Vec3::X;
-        }
-    
-        // Feed the basis every frame. Even if the player doesn't move - just use `desired_velocity:
-        // Vec3::ZERO`. `TnuaController` starts without a basis, which will make the character collider
-        // just fall.
+
+        let fd = move_direction * 50. * **multiplier;
+
         controller.basis(TnuaBuiltinWalk {
-            // The `desired_velocity` determines how the character will move.
-            desired_velocity: Vec3::new(2000.0, 0., 0.),
-            // The `float_height` must be greater (even if by little) from the distance between the
-            // character's center and the lowest point of its collider.
-            float_height: 9.,
-            // `TnuaBuiltinWalk` has many other fields for customizing the movement - but they have
-            // sensible defaults. Refer to the `TnuaBuiltinWalk`'s documentation to learn what they do.
+            desired_velocity: fd,
+            float_height: 44. + f32::EPSILON,
+            desired_forward: Vec3::X,
+            //cling_distance: 70.,
+            acceleration: 2000.,
+            air_acceleration: 1000.,
             ..Default::default()
         });
-        // Feed the jump action every frame as long as the player holds the jump button. If the player
-        // stops holding the jump button, simply stop feeding the action.
-        if keyboard.pressed(KeyCode::Space) {
+
+        if keyboard.just_pressed(KeyCode::Space) {
             controller.action(TnuaBuiltinJump {
-                // The height is the only mandatory field of the jump button.
-                height: 60.0,
-                // `TnuaBuiltinJump` also has customization fields with sensible defaults.
+                height: 80.0 * multiplier.y,
                 ..Default::default()
             });
         }
     }
     
 
-    fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+    fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>, r_player: Res<PlayerResource>, spi_assets: Res<Assets<IndexAsset>>, spi: Res<SpriteIndexResource>, mut spi_event: EventReader<SPILoaded>) {
+        for _ in spi_event.read_with_id() {
+            warn!("e recv");
+            let i_a = match spi_assets.get(&**spi) {
+                Some(v) => v,
+                None => {
+                    warn!("SpriteIndex is not loaded yet, aborting.");
+                    return
+                }
+            };
 
-        let handle: Handle<Image> = asset_server.load(PLAYER_SPRITE_PATH);
+            let handle = asset_server.load(match i_a.get(&PLAYER_STILL.0){
+                Some(v) => v,
+                None => {
+                    warn!("Can't find {} in SpriteIndex.", PLAYER_STILL.0);
+                    return;
+                }
+            });
+        
+            commands.spawn((
+                SpriteBundle {
+                    texture: handle,
+                    transform: Transform::from_xyz(0., 100., 0.).with_scale(Vec3::splat(r_player.scale_f32)).with_rotation(Quat::IDENTITY),
+                    ..default()
+                },
+                Direction::default(),
+                Player::default(),
+                TnuaControllerBundle::default(),
+                RigidBody::Dynamic,
+                Collider::rectangle(r_player.size_x, r_player.size_y),
+                Velocity(Vec2::ZERO),
+                MovementMultiplier::default()
+            ));
+        }
 
-        commands.spawn((
-            SpriteBundle {
-                texture: handle,
-                transform: Transform::from_xyz(0., 16., 0.).with_scale(Vec3::splat(PLAYER_SCALE.x)).with_rotation(Quat::IDENTITY),
-                ..default()
-            },
-            Player::default(),
-            TnuaControllerBundle::default(),
-            RigidBody::Dynamic,
-            Collider::rectangle(PLAYER_SIZE.0, PLAYER_SIZE.1),
-            Velocity(Vec2::ZERO),
-            SpeedMultiplier::default()
-        ));
     }
+
 }

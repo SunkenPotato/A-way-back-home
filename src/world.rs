@@ -2,8 +2,8 @@ pub mod loader {
     
     use std::{fs::File, io::Write as _, num::NonZero, sync::LazyLock};
 
-    use avian2d::prelude::{ColliderConstructor, RigidBody};
-    use bevy::{app::{App, Plugin, PreStartup, Startup}, asset::{AssetServer, Handle}, log::error, math::Vec3, prelude::{AppTypeRegistry, Commands, Res, Resource, Transform, World}, scene::{DynamicScene, DynamicSceneBundle}, tasks::IoTaskPool, utils::default};
+    use avian2d::prelude::{Collider, ColliderConstructor, RigidBody};
+    use bevy::{app::{App, Plugin, PreStartup, Startup}, asset::{AssetServer, Handle}, log::error, math::Vec3, prelude::{AppTypeRegistry, Bundle, Commands, Res, Resource, Transform, World}, scene::{DynamicScene, DynamicSceneBundle}, tasks::IoTaskPool, utils::default};
 
     use crate::components::component::{Identifier, SpriteMarker, Tile, Velocity};
 
@@ -20,7 +20,7 @@ pub mod loader {
     pub struct SavePath(String);
 
     #[derive(Resource, Debug)]
-    pub struct DSHandle(pub Handle<DynamicScene>);
+    pub struct DynSceneHandle(pub Handle<DynamicScene>);
 
     impl Plugin for WorldPlugin {
         fn build(&self, app: &mut bevy::prelude::App) {
@@ -48,11 +48,30 @@ pub mod loader {
         app
     }
 
+    #[derive(Bundle)]
+    pub struct TileBundle {
+        tile: Tile,
+        i: Identifier,
+        cc: ColliderConstructor,
+        rb: RigidBody,
+        t: Transform,
+        s: SpriteMarker
+    }
+
+    #[derive(Resource)]
+    pub struct PlayerSpawnMarker(pub Vec3);
+
+    impl TileBundle {
+        fn construct(tile: Tile, i: Identifier, cc: ColliderConstructor, rb: RigidBody, t: Transform, s: SpriteMarker) -> Self {
+            Self { tile, i, cc, rb, t, s }
+        }
+    }
+
     impl WorldPlugin {
         fn load_world(mut commands: Commands, asset_server: Res<AssetServer>, sp: Res<SavePath>) {
             let ds_handle = asset_server.load(sp.0.clone());
 
-            commands.insert_resource(DSHandle(ds_handle.clone()));
+            commands.insert_resource(DynSceneHandle(ds_handle.clone()));
             
             commands.spawn(DynamicSceneBundle {
                 scene: ds_handle,
@@ -80,24 +99,41 @@ pub mod loader {
 
             /* SPAWN ELEMENTS HERE */
             // BEGIN
-            for x in 0..10 {
-                let x_pos = (x as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.x);
+            {
+                for x in 0..10 {
+                    let x_pos = (x as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.x);
 
-                scn_world.spawn((
-                    Tile,
-                    tile::idents::DIRT.clone(),
-                    ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0, y_length: super::tile::TILE_SIZE.1 },
-                    RigidBody::Static,
-                    Transform::from_xyz(x_pos, -64., 0.)
-                        .with_scale(super::tile::TILE_SCALE),
-                    SpriteMarker
-                ));
+                    scn_world.spawn(TileBundle::construct(
+                        Tile,
+                      super::tile::idents::DIRT.clone(),
+                     ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0, y_length: super::tile::TILE_SIZE.1 },
+                     RigidBody::Static,
+                      Transform::from_xyz(x_pos, 0., 0.)
+                            .with_scale(super::tile::TILE_SCALE),
+                      SpriteMarker
+                    ));     
+                }
+
+                for y in 0..1 {
+                    let y_pos = (y as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.y);
+
+                    scn_world.spawn(TileBundle::construct(
+                        Tile,
+                        tile::idents::DIRT.clone(),
+                        ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0 , y_length: super::tile::TILE_SIZE.1 },
+                        RigidBody::Static,
+                        Transform::from_xyz(80., y_pos, 0.)
+                            .with_scale(super::tile::TILE_SCALE),
+                        SpriteMarker
+                    ));
+                }
             }
+
             // END
 
             /* INSERT RESOURCES HERE */
             // BEGIN
-            
+            //scn_world.insert_resource()
             // END
 
             let scn = DynamicScene::from_world(&scn_world);
@@ -215,8 +251,7 @@ pub mod tile {
     /// I'm not explaning myself in a private project 
     ///
     pub mod idents {
-        use crate::{components::component::Identifier, identifier};
-        use std::sync::LazyLock;
+        use crate::identifier;
 
         identifier!(DIRT, "tile.ter.dirt");
         identifier!(GRASS, "tile.dec.grass");

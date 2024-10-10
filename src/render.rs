@@ -24,7 +24,9 @@ pub mod camera {
 }
 
 pub mod sprite {
-    use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Assets, Handle}, log::{debug, info, warn}, prelude::{Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Resource, Transform}, scene::SceneInstanceReady, sprite::SpriteBundle, utils::default};
+    use std::ops::Deref;
+
+    use bevy::{app::{Plugin, PreStartup, Startup, Update}, asset::{AssetServer, Assets, Handle}, log::{debug, info, warn}, prelude::{Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Resource, Transform}, scene::SceneInstanceReady, sprite::SpriteBundle, utils::default};
 
     use crate::components::{asset::IndexAsset, component::{Identifier, WithSprite}};
 
@@ -32,17 +34,25 @@ pub mod sprite {
 
     #[derive(Resource)]
     pub struct SpriteIndexResource {
-        spi_handle: Handle<IndexAsset>,
-        is_loaded: bool
+        pub spi_handle: Handle<IndexAsset>,
+        pub is_loaded: bool
     }
 
-    #[derive(Event)]
-    struct SPILoaded;
+    impl Deref for SpriteIndexResource {
+        type Target = Handle<IndexAsset>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.spi_handle
+        }
+    }
+
+    #[derive(Event, Debug)]
+    pub struct SPILoaded;
 
     impl Plugin for SpritePlugin {
         fn build(&self, app: &mut bevy::prelude::App) {
             app.add_event::<SPILoaded>();
-            app.add_systems(Startup, Self::load_spi);
+            app.add_systems(PreStartup, Self::load_spi);
             app.add_systems(Update, (Self::set_spi_state_true, Self::apply_sprites).chain());
         }
     }
@@ -89,18 +99,18 @@ pub mod sprite {
 
             if all.is_empty() { return; }
 
-            for _ in load_event.read() {
-                debug!("SceneInstance Event Received");
+            for e1 in load_event.read() {
+                debug!("SceneInstanceReady Event Received {e1:?}");
 
-                for _ in index_loaded_event.read() {
+                for e2 in index_loaded_event.read() {
 
-                    info!("SpriteIndex Resource Event Recieved");
+                    info!("SPILoaded Resource Event Recieved: {e2:?}");
                     
                     let sprite_index = &index_assets.get(&spi_res.spi_handle).expect("should not be null because of event.").0;
                     
                     for (ident, transform, entity) in &all {
 
-                        debug!("Adding sprite for Identifier {:#?} and Entity: {:#?}", ident, entity);
+                        debug!("Adding sprite for Identifier {:#?} and Entity: {:#?}", ident.0, entity);
 
                         let path = match sprite_index.get(&ident.0) {
                             Some(v) => v,
@@ -121,6 +131,8 @@ pub mod sprite {
 
                 }
             }
+
+            
         }
     }
 }

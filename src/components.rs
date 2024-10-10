@@ -1,5 +1,6 @@
 pub mod component {
-    use bevy::{math::Vec2, prelude::{Component, ReflectComponent, With}, reflect::Reflect};
+
+    use bevy::{math::{Vec2, Vec3}, prelude::{Component, ReflectComponent, With}, reflect::Reflect};
 
     #[derive(Component, Reflect)]
     #[reflect(Component)]
@@ -17,19 +18,55 @@ pub mod component {
     #[reflect(Component)]
     pub struct SpriteMarker;
 
+    #[derive(Component, Reflect)]
+    #[reflect(Component)]
+    pub struct MovementMultiplier(Vec3);
+
     pub type WithSprite = With<SpriteMarker>;
+
+    pub mod impls {
+        use std::ops::Deref;
+
+        use bevy::math::Vec3;
+
+        use super::MovementMultiplier;
+
+        impl Default for MovementMultiplier {
+            fn default() -> Self {
+                Self(Vec3::from_slice(&[10., 1., 1.]))
+            }
+        }
+
+        impl Deref for MovementMultiplier {
+            type Target = Vec3;
+    
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+    }
     
 }
 
 pub mod asset {
-    use std::io;
+
+    use std::{io, ops::Deref};
 
     use bevy::{app::Plugin, asset::{Asset, AssetApp, AssetLoader, AsyncReadExt}, reflect::Reflect, utils::hashbrown::HashMap};
 
     #[derive(Reflect, Asset)]
     pub struct IndexAsset(pub HashMap<String, String>);
 
-    #[derive(Default)]
+    impl Deref for IndexAsset {
+        type Target = HashMap<String, String>;
+        
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    #[derive(Default, Clone, Copy)]
     pub struct IndexAssetLoader;
 
     pub struct AssetPlugin;
