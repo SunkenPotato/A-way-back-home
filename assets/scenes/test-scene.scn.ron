@@ -1,0 +1,335 @@
+(
+  resources: {},
+  entities: {
+    4294967296: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 0.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967297: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 72.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967298: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 144.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967299: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 216.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967300: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 288.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967301: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 360.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967302: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 432.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967303: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 504.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967304: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 576.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967305: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 648.0,
+            y: -64.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+    4294967306: (
+      components: {
+        "a_way_back_home::components::component::Tile": (),
+        "a_way_back_home::components::component::Identifier": ("tile.ter.dirt"),
+        "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+          x_length: 16.0,
+          y_length: 16.0,
+        ),
+        "avian2d::dynamics::rigid_body::RigidBody": Static,
+        "bevy_transform::components::transform::Transform": (
+          translation: (
+            x: 80.0,
+            y: 0.0,
+            z: 0.0,
+          ),
+          rotation: (
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+          ),
+          scale: (
+            x: 4.5,
+            y: 4.5,
+            z: 0.0,
+          ),
+        ),
+        "a_way_back_home::components::component::SpriteMarker": (),
+      },
+    ),
+  },
+)

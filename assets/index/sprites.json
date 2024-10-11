@@ -1,0 +1,5 @@
+{
+    "tile.ter.dirt": "sprites/terrain/dirt-1.png",
+    
+    "entity.player.still": "sprites/player/claire-still.png"
+}

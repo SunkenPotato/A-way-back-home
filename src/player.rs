@@ -1,103 +1,138 @@
-use avian2d::prelude::{ColliderConstructor, Restitution, RigidBody};
-use bevy::{
-    app::{Plugin, Update},
-    asset::AssetServer,
-    input::ButtonInput,
-    math::{Quat, Vec2, Vec3},
-    prelude::{Bundle, IntoSystemConfigs, KeyCode, Query, Res, Transform, With},
-    sprite::SpriteBundle,
-    utils::default,
-};
+use core::f32;
 
-use crate::components::{Direction, Grounded, Health, Moveable, Player, Speed, Velocity};
+use avian2d::prelude::{Collider, RigidBody};
+use bevy::{app::{Plugin, Update}, asset::{AssetServer, Assets}, input::ButtonInput, log::warn, math::{Quat, Vec2, Vec3}, prelude::{Commands, Component, EventReader, IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform, With}, sprite::{Sprite, SpriteBundle}, utils::default};
+use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
-pub const DEFAULT_PLAYER_SPRITE: &'static str = "sprites/player/claire-left.png";
-pub const PLAYER_SCALE: f32 = 4.;
-pub const PLAYER_SIZE: (f32, f32) = (16., 19.);
+use crate::{components::{asset::IndexAsset, component::{MovementMultiplier, Velocity}}, identifier, render::sprite::{SPILoaded, SpriteIndexResource}};
 
 pub struct PlayerPlugin;
 
+identifier!(PLAYER_STILL, "entity.player.still");
+
+#[derive(Resource)]
+#[allow(unused)]
+pub struct PlayerResource {
+    pub size_x: f32,
+    pub size_y: f32,
+    pub scale: Vec3,
+    pub scale_f32: f32
+}
+
+impl Default for PlayerResource {
+    fn default() -> Self {
+        Self {
+            size_x: 16.,
+            size_y: 19.,
+            scale: Vec3::from_slice(&[4.5, 4.5, 0.]),
+            scale_f32: 4.5
+        }
+    }
+}
+
+#[derive(Component, Default)]
+#[allow(unused)]
+pub struct Player {
+    direction: Direction
+}
+
+#[derive(Component, Default, PartialEq, Eq)]
+pub enum Direction {
+    L, 
+    #[default]
+    R
+}
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(
-            Update,
-            (Self::movement_system, Self::grounded_rotation_system).chain(),
-        );
+        app.init_resource::<PlayerResource>();
+
+        app.add_systems(Update, Self::spawn_player);
+        app.add_systems(Update, (Self::move_controller).chain());
     }
 }
 
 impl PlayerPlugin {
-    pub fn movement_system(
-        mut query: Query<(&mut Velocity, &Grounded, &mut Transform), With<Player>>,
-        kb_input: Res<ButtonInput<KeyCode>>,
+    
+    fn move_controller(
+        mut query: Query<(&mut TnuaController, &mut Sprite, &mut Direction, &MovementMultiplier), With<Player>>, 
+        keyboard: Res<ButtonInput<KeyCode>>
     ) {
-        for (mut player, grounded, mut transform) in &mut query {
-            player.0.x = if kb_input.pressed(KeyCode::KeyD) {
-                1.
-            } else if kb_input.pressed(KeyCode::KeyA) {
-                -1.
-            } else {
-                0.
+        let Ok((mut controller, mut sprite, mut direction, multiplier)) = query.get_single_mut() else { return; };
+
+        let mut move_direction = Vec3::ZERO;
+
+        if keyboard.pressed(KeyCode::KeyA) {
+            move_direction -= Vec3::X;
+            if let Direction::R = direction.as_ref() { 
+                *direction = Direction::L;
+                sprite.flip_x = true;
+            }
+        }
+        if keyboard.pressed(KeyCode::KeyD) {
+            move_direction += Vec3::X;
+            if let Direction::L = direction.as_ref() {
+                *direction = Direction::R;
+                sprite.flip_x = false;
+            }
+        }
+
+        let fd = move_direction * 50. * **multiplier;
+
+        controller.basis(TnuaBuiltinWalk {
+            desired_velocity: fd,
+            float_height: 44. + f32::EPSILON,
+            desired_forward: Vec3::X,
+            //cling_distance: 70.,
+            acceleration: 2000.,
+            air_acceleration: 1000.,
+            ..Default::default()
+        });
+
+        if keyboard.just_pressed(KeyCode::Space) {
+            controller.action(TnuaBuiltinJump {
+                height: 80.0 * multiplier.y,
+                ..Default::default()
+            });
+        }
+    }
+    
+
+    fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>, r_player: Res<PlayerResource>, spi_assets: Res<Assets<IndexAsset>>, spi: Res<SpriteIndexResource>, mut spi_event: EventReader<SPILoaded>) {
+        for _ in spi_event.read_with_id() {
+            warn!("e recv");
+            let i_a = match spi_assets.get(&**spi) {
+                Some(v) => v,
+                None => {
+                    warn!("SpriteIndex is not loaded yet, aborting.");
+                    return
+                }
             };
 
-            if kb_input.pressed(KeyCode::Space) && grounded.0 {
-                player.0.y = 1.
-            } else {
-                player.0.y = 0.
-            }
-
-            if kb_input.pressed(KeyCode::KeyR) && !grounded.0 {
-                transform.rotation.z = 0.;
-                transform.translation.y += 0.3;
-            }
+            let handle = asset_server.load(match i_a.get(&PLAYER_STILL.0){
+                Some(v) => v,
+                None => {
+                    warn!("Can't find {} in SpriteIndex.", PLAYER_STILL.0);
+                    return;
+                }
+            });
+        
+            commands.spawn((
+                SpriteBundle {
+                    texture: handle,
+                    transform: Transform::from_xyz(0., 100., 0.).with_scale(Vec3::splat(r_player.scale_f32)).with_rotation(Quat::IDENTITY),
+                    ..default()
+                },
+                Direction::default(),
+                Player::default(),
+                TnuaControllerBundle::default(),
+                RigidBody::Dynamic,
+                Collider::rectangle(r_player.size_x, r_player.size_y),
+                Velocity(Vec2::ZERO),
+                MovementMultiplier::default()
+            ));
         }
+
     }
 
-    pub fn construct_default_player(
-        asset_server: &Res<AssetServer>,
-        x: f32,
-        y: f32,
-    ) -> impl Bundle {
-        (
-            SpriteBundle {
-                texture: asset_server.load(DEFAULT_PLAYER_SPRITE),
-                transform: Transform::from_scale(Vec3::splat(PLAYER_SCALE))
-                    .with_translation(Vec3 { x, y, z: 0. }),
-                ..default()
-            },
-            Player::default(),
-            Speed::default(2.0),
-            Health(20.),
-            Direction::L,
-            ColliderConstructor::Rectangle {
-                x_length: PLAYER_SIZE.0,
-                y_length: PLAYER_SIZE.1,
-            },
-            RigidBody::Dynamic,
-            Velocity(Vec2::splat(0.)),
-            Moveable,
-            Grounded(true),
-            Restitution::PERFECTLY_INELASTIC,
-        )
-    }
-
-    pub fn grounded_rotation_system(mut query: Query<(&Transform, &mut Grounded), With<Moveable>>) {
-        for (transform, mut grounded) in &mut query {
-            let yaw_deg = Self::quaternion_to_euler(transform.rotation);
-
-            grounded.0 = crate::ternary!(yaw_deg > 5. + f32::EPSILON || yaw_deg == 180. + f32::EPSILON; false, true);
-        }
-    }
-
-    fn quaternion_to_euler(quat: Quat) -> f32 {
-        let (x, y, z, w) = (quat.x, quat.y, quat.z, quat.w);
-
-        let sin_yaw = 2.0 * (w * z + x * y);
-        let cos_yaw = 1.0 - 2.0 * (y * y + z * z);
-        let yaw = sin_yaw.atan2(cos_yaw);
-
-        let yaw_deg = yaw.to_degrees();
-
-        yaw_deg
-    }
 }
