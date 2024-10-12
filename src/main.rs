@@ -15,6 +15,7 @@ use bevy::prelude::{ImagePlugin, PluginGroup};
 use bevy_tnua::prelude::TnuaControllerPlugin;
 use bevy_tnua_avian2d::TnuaAvian2dPlugin;
 use components::asset::AssetPlugin;
+use entity::health::HealthPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -28,10 +29,11 @@ fn main() {
         .add_plugins(world::loader::WorldPlugin)
         .add_plugins(render::sprite::SpritePlugin)
         .add_plugins(AssetPlugin)
+        .add_plugins(HealthPlugin)
 
         .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.));
 
-        if let Some(_) = option_env!("DEBUG") {
+        if option_env!("DEBUG").is_some() {
             app.add_plugins(PhysicsDebugPlugin::default());
         }
 

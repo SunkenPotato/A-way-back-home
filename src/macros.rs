@@ -10,6 +10,6 @@ macro_rules! ternary {
 #[macro_export]
 macro_rules! identifier {
     ($identifier:ident, $string_i:expr) => {
-        pub const $identifier: std::sync::LazyLock<crate::components::component::Identifier> = std::sync::LazyLock::new(|| crate::components::component::Identifier($string_i.to_string()));
+        pub static $identifier: std::sync::LazyLock<$crate::components::component::Identifier> = std::sync::LazyLock::new(|| $crate::components::component::Identifier($string_i.to_string()));
     };
 }

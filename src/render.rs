@@ -26,7 +26,7 @@ pub mod camera {
 pub mod sprite {
     use std::ops::Deref;
 
-    use bevy::{app::{Plugin, PreStartup, Startup, Update}, asset::{AssetServer, Assets, Handle}, log::{debug, info, warn}, prelude::{Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Resource, Transform}, scene::SceneInstanceReady, sprite::SpriteBundle, utils::default};
+    use bevy::{app::{Plugin, PreStartup, Update}, asset::{AssetServer, Assets, Handle}, log::{debug, warn}, prelude::{Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Resource, Transform}, scene::SceneInstanceReady, sprite::SpriteBundle, utils::default};
 
     use crate::components::{asset::IndexAsset, component::{Identifier, WithSprite}};
 
@@ -71,8 +71,7 @@ pub mod sprite {
         fn set_spi_state_true(mut commands: Commands, index_assets: Res<Assets<IndexAsset>>, spi_res: Res<SpriteIndexResource>, mut index_loaded_event: EventWriter<SPILoaded>) {
             if spi_res.is_loaded { return; }
 
-            match index_assets.get(&spi_res.spi_handle) {
-                Some(_) => {
+            if index_assets.get(&spi_res.spi_handle).is_some() {
                     debug!("SpriteIndex Resource finished loading.");
                     commands.insert_resource(SpriteIndexResource {
                         spi_handle: spi_res.spi_handle.clone(),
@@ -80,8 +79,6 @@ pub mod sprite {
                     });
 
                     index_loaded_event.send(SPILoaded);
-                },
-                None => return
             };
         }
 
@@ -99,12 +96,9 @@ pub mod sprite {
 
             if all.is_empty() { return; }
 
-            for e1 in load_event.read() {
-                debug!("SceneInstanceReady Event Received {e1:?}");
-
-                for e2 in index_loaded_event.read() {
-
-                    info!("SPILoaded Resource Event Recieved: {e2:?}");
+            for _ in load_event.read() {
+                
+                for _ in index_loaded_event.read() {
                     
                     let sprite_index = &index_assets.get(&spi_res.spi_handle).expect("should not be null because of event.").0;
                     
@@ -135,4 +129,15 @@ pub mod sprite {
             
         }
     }
+
+    pub struct AnimationPlugin;
+
+    #[allow(unused_variables)]
+    impl Plugin for AnimationPlugin {
+        fn build(&self, app: &mut bevy::prelude::App) {
+            
+        }
+    }
+
+
 }
