@@ -1,7 +1,8 @@
 #![allow(unused_parens)]
+#![forbid(unsafe_code)]
 
 pub mod render;
-mod player;
+pub mod player;
 pub mod entity;
 pub mod components;
 pub mod macros;

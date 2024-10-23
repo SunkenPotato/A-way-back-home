@@ -1,0 +1,1 @@
+echo 'cargo clippy; exit' | powershell.exe

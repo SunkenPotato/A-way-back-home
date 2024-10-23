@@ -2,8 +2,8 @@ use core::f32;
 use std::fmt::Display;
 
 use avian2d::prelude::{Collider, RigidBody};
-use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Assets}, input::ButtonInput, log::{info, warn}, math::{Quat, UVec2, Vec2, Vec3}, prelude::{Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, KeyCode, Query, Res, ResMut, Resource, Transform, With}, sprite::{Sprite, SpriteBundle, TextureAtlas, TextureAtlasLayout}, time::Time, utils::default};
-use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
+use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Assets}, input::ButtonInput, log::{info, warn}, math::{Quat, UVec2, Vec2, Vec3}, prelude::{AnimationNodeIndex, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, KeyCode, Query, Res, ResMut, Resource, Transform, With}, sprite::{Sprite, SpriteBundle, TextureAtlas, TextureAtlasLayout}, time::Time, utils::default};
+use bevy_tnua::{prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle}, TnuaAnimatingState};
 
 use crate::{components::{asset::IndexAsset, component::{AnimationConfig, Health, MovementMultiplier, Velocity}}, identifier, render::sprite::{SPILoaded, SpriteIndexResource}, world};
 
@@ -21,6 +21,12 @@ pub struct PlayerResource {
     pub size_y: f32,
     pub scale: Vec3,
     pub scale_f32: f32
+}
+
+pub enum AnimationState {
+    Standing,
+    Moving(f32),
+    Jumping
 }
 
 impl Default for PlayerResource {
@@ -128,7 +134,13 @@ impl PlayerPlugin {
             }
         }
 
-        if (key_a_pressed || key_d_pressed) && a_config.frame_timer.finished() {
+        let standing_on_solid = match controller.concrete_basis::<TnuaBuiltinWalk>() {
+            Some((_, basis_state)) => basis_state.standing_on_entity().is_some(),
+            _ => false
+        };
+        
+
+        if (key_a_pressed || key_d_pressed) && a_config.frame_timer.finished() && standing_on_solid {
             a_config.frame_timer = AnimationConfig::timer_from_fps(a_config.fps);
         }      
 
@@ -194,12 +206,16 @@ impl PlayerPlugin {
                     transform: Transform::from_xyz(0., 100., 0.).with_scale(Vec3::splat(r_player.scale_f32)).with_rotation(Quat::IDENTITY),
                     ..default()
                 },
+
                 Direction::default(),
                 Player::default(),
                 TnuaControllerBundle::default(),
+                TnuaAnimatingState::<AnimationState>::default() ,
+
                 RigidBody::Dynamic,
                 Collider::rectangle(r_player.size_x, r_player.size_y),
                 Velocity(Vec2::ZERO),
+
                 MovementMultiplier::default(),
                 Health::from((20., 20.)),
                 TextureAtlas {
