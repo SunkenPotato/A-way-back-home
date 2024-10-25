@@ -49,7 +49,7 @@ pub mod component {
     pub type WithSprite = With<SpriteMarker>;
 
     pub mod impls {
-        use std::{ops::{Add, Deref, Div, Mul, Sub}, time::Duration};
+        use std::{fmt::Display, ops::{Add, Deref, Div, Mul, Sub}, time::Duration};
 
         use bevy::{math::Vec3, time::Timer};
 
@@ -131,6 +131,18 @@ pub mod component {
                     default: value.0,
                     current: value.1
                 }
+            }
+        }
+
+        impl Display for MovementMultiplier {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self)
+            }
+        }
+
+        impl Display for AnimationConfig {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "AnimationConfig {{\n\tfirst_sprite: {},\n\tlast_sprite: {},\n\tfps: {},\n\tframe_timer: {:#?}}}", self.first_sprite, self.last_sprite, self.fps, self.frame_timer)
             }
         }
 

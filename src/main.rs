@@ -7,6 +7,7 @@ pub mod entity;
 pub mod components;
 pub mod macros;
 pub mod world;
+pub mod util;
 
 use avian2d::prelude::{Gravity, PhysicsDebugPlugin};
 use avian2d::PhysicsPlugins;
