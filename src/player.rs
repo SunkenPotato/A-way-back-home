@@ -2,7 +2,7 @@ use core::f32;
 use std::fmt::Display;
 
 use avian2d::prelude::{Collider, RigidBody};
-use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Assets}, input::ButtonInput, log::{info, warn}, math::{Quat, UVec2, Vec2, Vec3}, prelude::{AnimationNodeIndex, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, KeyCode, Query, Res, ResMut, Resource, Transform, With}, sprite::{Sprite, SpriteBundle, TextureAtlas, TextureAtlasLayout}, time::Time, utils::default};
+use bevy::{app::{Plugin, Startup, Update}, asset::{AssetServer, Assets}, input::ButtonInput, log::{info, warn}, math::{Quat, UVec2, Vec2, Vec3}, prelude::{Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, KeyCode, Query, Res, ResMut, Resource, Transform, With}, sprite::{Sprite, SpriteBundle, TextureAtlas, TextureAtlasLayout}, time::Time, utils::default};
 use bevy_tnua::{prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle}, TnuaAnimatingState};
 
 use crate::{components::{asset::IndexAsset, component::{AnimationConfig, Health, MovementMultiplier, Velocity}}, identifier, render::sprite::{SPILoaded, SpriteIndexResource}, world};
@@ -252,11 +252,12 @@ impl PlayerPlugin {
             config.frame_timer.tick(time.delta());
 
             if config.frame_timer.just_finished() {
-                if atlas.index == config.last_sprite {
-                    atlas.index = config.first_sprite;
-                } else {
-                    atlas.index += 1;
-                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                match atlas.index == config.last_sprite {
+                    true => atlas.index = config.first_sprite,
+                    _ => {
+                        atlas.index += 1;
+                        config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                    }
                 }
             }
         }

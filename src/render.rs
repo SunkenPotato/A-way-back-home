@@ -1,5 +1,5 @@
 pub mod camera {
-    use bevy::{app::{Plugin, Startup}, prelude::{Camera2dBundle, Commands, Transform}, utils::default};
+    use bevy::{app::{Plugin, Startup}, prelude::{Camera2dBundle, Commands}};
 
     pub struct CameraPlugin;
 
@@ -13,12 +13,11 @@ pub mod camera {
         
         /// Initialize the game camera
         fn init_camera(mut commands: Commands) {
-            commands.spawn(
-                Camera2dBundle {
-                    transform: Transform::from_xyz(0., 0., 0.),
-                    ..default()
-                }
-            );
+            let mut camera = Camera2dBundle::default();
+            camera.projection.scale = 0.5;
+            camera.transform.translation.x += 1280. / 4.;
+            camera.transform.translation.y += 720. / 4.;
+            commands.spawn(camera);
         }
     }
 }

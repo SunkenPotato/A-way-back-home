@@ -13,6 +13,7 @@ use avian2d::PhysicsPlugins;
 use bevy::math::Vec2;
 use bevy::{app::App, DefaultPlugins};
 use bevy::prelude::{ImagePlugin, PluginGroup};
+use bevy_ecs_ldtk::LdtkPlugin;
 use bevy_tnua::prelude::TnuaControllerPlugin;
 use bevy_tnua_avian2d::TnuaAvian2dPlugin;
 use components::asset::AssetPlugin;
@@ -31,6 +32,7 @@ fn main() {
         .add_plugins(render::sprite::SpritePlugin)
         .add_plugins(AssetPlugin)
         .add_plugins(HealthPlugin)
+        .add_plugins(LdtkPlugin)
 
         .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.));
 
