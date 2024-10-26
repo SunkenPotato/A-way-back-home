@@ -1,6 +1,11 @@
 pub mod component {
 
-    use bevy::{math::{Vec2, Vec3}, prelude::{Component, ReflectComponent, With}, reflect::Reflect, time::Timer};
+    use bevy::{
+        math::{Vec2, Vec3},
+        prelude::{Component, ReflectComponent, With},
+        reflect::Reflect,
+        time::Timer,
+    };
 
     #[derive(Component, Reflect)]
     #[reflect(Component)]
@@ -26,7 +31,7 @@ pub mod component {
     #[reflect(Component)]
     pub struct Health {
         pub default: f32,
-        pub current: f32
+        pub current: f32,
     }
 
     #[derive(Component, Reflect)]
@@ -49,7 +54,11 @@ pub mod component {
     pub type WithSprite = With<SpriteMarker>;
 
     pub mod impls {
-        use std::{fmt::Display, ops::{Add, Deref, Div, Mul, Sub}, time::Duration};
+        use std::{
+            fmt::Display,
+            ops::{Add, Deref, Div, Mul, Sub},
+            time::Duration,
+        };
 
         use bevy::{math::Vec3, time::Timer};
 
@@ -63,7 +72,7 @@ pub mod component {
 
         impl Deref for MovementMultiplier {
             type Target = Vec3;
-    
+
             fn deref(&self) -> &Self::Target {
                 &self.0
             }
@@ -84,7 +93,7 @@ pub mod component {
             fn mul(self, rhs: f32) -> Self::Output {
                 Self {
                     default: self.default,
-                    current: self.current.mul(rhs)
+                    current: self.current.mul(rhs),
                 }
             }
         }
@@ -96,31 +105,31 @@ pub mod component {
             fn div(self, rhs: f32) -> Self::Output {
                 Self {
                     default: self.default,
-                    current: self.current.div(rhs)
+                    current: self.current.div(rhs),
                 }
             }
         }
 
         impl Add<f32> for Health {
             type Output = Health;
-            
+
             #[inline]
             fn add(self, rhs: f32) -> Self::Output {
                 Self {
                     default: self.default,
-                    current: self.current.add(rhs)
+                    current: self.current.add(rhs),
                 }
             }
         }
 
         impl Sub<f32> for Health {
             type Output = Health;
-            
+
             #[inline]
             fn sub(self, rhs: f32) -> Self::Output {
                 Self {
                     default: self.default,
-                    current: self.current.sub(rhs)
+                    current: self.current.sub(rhs),
                 }
             }
         }
@@ -129,7 +138,7 @@ pub mod component {
             fn from(value: (f32, f32)) -> Self {
                 Self {
                     default: value.0,
-                    current: value.1
+                    current: value.1,
                 }
             }
         }
@@ -158,31 +167,37 @@ pub mod component {
                     first_sprite: first,
                     last_sprite: last,
                     fps,
-                    frame_timer: Self::timer_from_fps(fps)
+                    frame_timer: Self::timer_from_fps(fps),
                 }
             }
 
             pub fn timer_from_fps(fps: u8) -> Timer {
-                Timer::new(Duration::from_secs_f32(1.0 / (fps as f32)), bevy::time::TimerMode::Once)
+                Timer::new(
+                    Duration::from_secs_f32(1.0 / (fps as f32)),
+                    bevy::time::TimerMode::Once,
+                )
             }
         }
-
     }
-    
 }
 
 pub mod asset {
 
     use std::{io, ops::Deref};
 
-    use bevy::{app::Plugin, asset::{Asset, AssetApp, AssetLoader, AsyncReadExt}, reflect::Reflect, utils::hashbrown::HashMap};
+    use bevy::{
+        app::Plugin,
+        asset::{Asset, AssetApp, AssetLoader, AsyncReadExt},
+        reflect::Reflect,
+        utils::hashbrown::HashMap,
+    };
 
     #[derive(Reflect, Asset)]
     pub struct IndexAsset(pub HashMap<String, String>);
 
     impl Deref for IndexAsset {
         type Target = HashMap<String, String>;
-        
+
         fn deref(&self) -> &Self::Target {
             &self.0
         }
@@ -206,24 +221,27 @@ pub mod asset {
         type Settings = ();
 
         fn load<'a>(
-                &'a self,
-                reader: &'a mut bevy::asset::io::Reader,
-                _settings: &'a Self::Settings,
-                load_context: &'a mut bevy::asset::LoadContext,
-            ) -> impl bevy::utils::ConditionalSendFuture<Output = Result<Self::Asset, Self::Error>> {
-            
-                Box::pin(async move {
-                    let mut buf = String::new();
-                    reader.read_to_string(&mut buf).await.expect("Could not read TextAsset");
-                    
-                    Ok(IndexAsset(serde_json::from_str(&buf).unwrap_or_else(|_| panic!("Invalid JSON in asset: {}", load_context.asset_path()))))
-                })
+            &'a self,
+            reader: &'a mut bevy::asset::io::Reader,
+            _settings: &'a Self::Settings,
+            load_context: &'a mut bevy::asset::LoadContext,
+        ) -> impl bevy::utils::ConditionalSendFuture<Output = Result<Self::Asset, Self::Error>>
+        {
+            Box::pin(async move {
+                let mut buf = String::new();
+                reader
+                    .read_to_string(&mut buf)
+                    .await
+                    .expect("Could not read TextAsset");
 
+                Ok(IndexAsset(serde_json::from_str(&buf).unwrap_or_else(
+                    |_| panic!("Invalid JSON in asset: {}", load_context.asset_path()),
+                )))
+            })
         }
 
         fn extensions(&self) -> &[&str] {
             &["txt", "json", ""]
         }
     }
-
 }
