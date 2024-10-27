@@ -1,13 +1,22 @@
 pub mod loader {
-    
-    use std::{fs::File, io::Write as _, num::NonZero, sync::LazyLock};
 
-    use avian2d::prelude::{ColliderConstructor, RigidBody};
-    use bevy::{app::{App, Plugin, PreStartup, Startup}, asset::{AssetServer, Handle}, log::error, math::Vec3, prelude::{AppTypeRegistry, Bundle, Commands, Res, Resource, Transform, World}, scene::{DynamicScene, DynamicSceneBundle}, tasks::IoTaskPool, utils::default};
+    use std::{num::NonZero, sync::LazyLock};
 
-    use crate::components::component::{Identifier, SpriteMarker, Tile, Velocity};
-
-    use super::tile;
+    use avian2d::{
+        dynamics::rigid_body,
+        prelude::{Collider, LockedAxes, RigidBody},
+    };
+    use bevy::{
+        app::{Plugin, Startup, Update},
+        asset::AssetServer,
+        math::Vec3,
+        prelude::{Bundle, Commands, Component, Event, EventReader, EventWriter, Res},
+        utils::default,
+    };
+    use bevy_ecs_ldtk::{
+        app::{LdtkIntCell, LdtkIntCellAppExt},
+        IntGridCell, LdtkIntCell, LdtkWorldBundle, LevelSelection,
+    };
 
     pub struct WorldPlugin;
 
@@ -15,179 +24,78 @@ pub mod loader {
 
     pub const GLOBAL_SCALE: Vec3 = Vec3::from_slice(&[3.5, 3.5, 0.]);
 
-    #[derive(Resource, Clone)]
-    pub struct SavePath(String);
+    const GRASS_INT_CELL: i32 = 1;
 
-    #[derive(Resource, Debug)]
-    pub struct DynSceneHandle(pub Handle<DynamicScene>);
+    #[derive(Event)]
+    pub struct ChangeLevel(usize);
 
     impl Plugin for WorldPlugin {
         fn build(&self, app: &mut bevy::prelude::App) {
-            add_type_reg(app);
-
-            app.insert_resource(SavePath("scenes/test-scene.scn.ron".into()));
-
-            app.add_systems(Startup, Self::load_world);
-
-            if option_env!("DEV_MODE").is_some() {
-                app.add_systems(PreStartup, Self::save_world);
-            };
+            app.add_systems(Startup, load_world);
+            app.add_systems(Update, set_level);
+            app.add_event::<ChangeLevel>();
+            app.register_ldtk_int_cell::<GrassTerrainBundle>(GRASS_INT_CELL);
         }
     }
 
-    fn add_type_reg(app: &mut App) -> &mut App {
-        app
-            .register_type::<Tile>()
-            .register_type::<Identifier>()
-            .register_type::<Velocity>()
-            .register_type::<SpriteMarker>()
+    fn load_world(
+        mut commands: Commands,
+        asset_server: Res<AssetServer>,
+        mut event_writer: EventWriter<ChangeLevel>,
+    ) {
+        let ldtk_handle = asset_server.load("scenes/test-world.ldtk");
 
-            .register_type::<ColliderConstructor>();
+        let ldtk_bundle = LdtkWorldBundle {
+            ldtk_handle,
+            ..default()
+        };
 
-        app
+        commands.spawn(ldtk_bundle);
+        event_writer.send(ChangeLevel(0));
     }
 
-    #[derive(Bundle)]
-    pub struct TileBundle {
-        tile: Tile,
-        i: Identifier,
-        cc: ColliderConstructor,
-        rb: RigidBody,
-        t: Transform,
-        s: SpriteMarker
-    }
-
-    #[derive(Resource)]
-    pub struct PlayerSpawnMarker(pub Vec3);
-
-    impl TileBundle {
-        fn construct(tile: Tile, i: Identifier, cc: ColliderConstructor, rb: RigidBody, t: Transform, s: SpriteMarker) -> Self {
-            Self { tile, i, cc, rb, t, s }
+    fn set_level(mut commands: Commands, mut change_level_e: EventReader<ChangeLevel>) {
+        for event in change_level_e.read() {
+            commands.insert_resource(LevelSelection::index(event.0));
         }
     }
 
-    impl WorldPlugin {
-        fn load_world(mut commands: Commands, asset_server: Res<AssetServer>, sp: Res<SavePath>) {
-            let ds_handle = asset_server.load(sp.0.clone());
+    // END SYS
 
-            commands.insert_resource(DynSceneHandle(ds_handle.clone()));
-            
-            commands.spawn(DynamicSceneBundle {
-                scene: ds_handle,
-                ..default()
-            });
+    // START STRUCT
+    #[derive(Component, Default)]
+    struct CollisionEntity;
 
-        }
+    #[derive(Default, Bundle)]
+    struct GrassTerrainBundle {
+        marker: CollisionEntity,
+        collider: Collider,
+        rigid_body: RigidBody,
+    }
 
-        fn save_world(world: &mut World) {
-
-            let save_path = match world.get_resource::<SavePath>().cloned() {
-                Some(v) => v,
-                None => {
-                    error!("Scene path is unexpectedly None");
-                    world.send_event(bevy::app::AppExit::Error(*EXIT_ERROR_CODE));
-                    return;
-                }
-            };
-
-            let mut scn_world = World::new();
-
-            let type_reg = world.resource::<AppTypeRegistry>().clone();
-            scn_world.insert_resource(type_reg);
-            
-
-            /* SPAWN ELEMENTS HERE */
-            // BEGIN
-            {
-                
-                for x in -10..-3 {
-                    let x_pos = (x as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.x);
-                    
-                    scn_world.spawn(TileBundle::construct(
-                        Tile,
-                      super::tile::idents::DIRT.clone(),
-                     ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0, y_length: super::tile::TILE_SIZE.1 },
-                     RigidBody::Static,
-                      Transform::from_xyz(x_pos, 0., 0.)
-                            .with_scale(super::tile::TILE_SCALE),
-                      SpriteMarker
-                    ));   
-                }
-
-                for x in 0..10 {
-                    let x_pos = (x as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.x);
-
-                    scn_world.spawn(TileBundle::construct(
-                        Tile,
-                      super::tile::idents::DIRT.clone(),
-                     ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0, y_length: super::tile::TILE_SIZE.1 },
-                     RigidBody::Static,
-                      Transform::from_xyz(x_pos, 0., 0.)
-                            .with_scale(super::tile::TILE_SCALE),
-                      SpriteMarker
-                    ));     
-                }
-
-                for y in 0..1 {
-                    let y_pos = (y as f32 * super::tile::TILE_SIZE.0 * super::tile::TILE_SCALE.y);
-
-                    scn_world.spawn(TileBundle::construct(
-                        Tile,
-                        tile::idents::DIRT.clone(),
-                        ColliderConstructor::Rectangle { x_length: super::tile::TILE_SIZE.0 , y_length: super::tile::TILE_SIZE.1 },
-                        RigidBody::Static,
-                        Transform::from_xyz(80., y_pos, 0.)
-                            .with_scale(super::tile::TILE_SCALE),
-                        SpriteMarker
-                    ));
-                }
+    impl GrassTerrainBundle {
+        fn new(collider: Collider, rigid_body: RigidBody) -> Self {
+            Self {
+                marker: CollisionEntity,
+                collider,
+                rigid_body,
             }
-
-            // END
-
-            /* INSERT RESOURCES HERE */
-            // BEGIN
-            //scn_world.insert_resource()
-            // END
-
-            let scn = DynamicScene::from_world(&scn_world);
-            let type_reg = world.resource::<AppTypeRegistry>().read();
-            let serialized_scn = scn.serialize(&type_reg).unwrap();
-
-            IoTaskPool::get()
-                .spawn(async move {
-                    File::create(format!("assets/{}", save_path.0))
-                        .and_then(|mut file| file.write(serialized_scn.as_bytes()))
-                        .expect("Error writing scene to file")
-                })
-                .detach();
-
         }
     }
-}
 
-pub mod tile {
-    use bevy::math::Vec3;
+    impl LdtkIntCell for GrassTerrainBundle {
+        fn bundle_int_cell(
+            _: bevy_ecs_ldtk::IntGridCell,
+            layer_instance: &bevy_ecs_ldtk::prelude::LayerInstance,
+        ) -> Self {
+            let collider = Collider::rectangle(
+                layer_instance.grid_size as f32,
+                layer_instance.grid_size as f32,
+            );
 
-    pub const TILE_SCALE: Vec3 = super::loader::GLOBAL_SCALE;
-    pub const TILE_SIZE: (f32, f32) = (16., 16.);
-
-    // Define Tile Identifiers here
-    // BEGIN
-
-    /// The format for Identifiers is:
-    /// ```
-    /// entity.type.name
-    /// ```
-    /// 
-    /// I'm not explaning myself in a private project 
-    ///
-    pub mod idents {
-        #![allow(clippy::borrow_interior_mutable_const)]
-        use crate::identifier;
-
-        identifier!(DIRT, "tile.ter.dirt");
-        identifier!(GRASS, "tile.dec.grass");
+            Self::new(collider, RigidBody::Static)
+        }
     }
-    // END
+
+    // END STRUCT
 }

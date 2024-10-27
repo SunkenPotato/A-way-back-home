@@ -2,9 +2,15 @@
 pub mod health {
     use std::ops::Deref;
 
-    use bevy::{app::{Plugin, Update}, prelude::{Commands, Entity, Query, Res, Resource, Transform, With, Without}};
+    use bevy::{
+        app::{Plugin, Update},
+        prelude::{Commands, Entity, Query, Res, Resource, Transform, With, Without},
+    };
 
-    use crate::{components::component::{Health, Mortal}, player::Player};
+    use crate::{
+        components::component::{Health, Mortal},
+        player::Player,
+    };
 
     pub struct HealthPlugin;
 
@@ -22,7 +28,7 @@ pub mod health {
 
         fn deref(&self) -> &Self::Target {
             &self.0
-        }        
+        }
     }
 
     impl Plugin for HealthPlugin {
@@ -32,10 +38,12 @@ pub mod health {
         }
     }
 
-    
     #[allow(clippy::type_complexity)]
     // Player gets its own special kill system
-    fn void_death_system(mut entities: Query<(&Transform, &mut Health), (Without<Player>,With<Mortal>)>, void_height: Res<VoidHeight>) {
+    fn void_death_system(
+        mut entities: Query<(&Transform, &mut Health), (Without<Player>, With<Mortal>)>,
+        void_height: Res<VoidHeight>,
+    ) {
         for (transform, mut health) in &mut entities {
             if transform.translation.y <= **void_height {
                 health.current = 0.;
@@ -44,7 +52,10 @@ pub mod health {
     }
 
     // Loot tables maybe?
-    fn kill_system(mut commands: Commands, e: Query<(&Health, Entity), (Without<Player>, With<Mortal>)>) {
+    fn kill_system(
+        mut commands: Commands,
+        e: Query<(&Health, Entity), (Without<Player>, With<Mortal>)>,
+    ) {
         e.iter().for_each(move |(h, e)| {
             if h.is_dead() {
                 commands.entity(e).despawn();
