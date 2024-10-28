@@ -1,36 +1,46 @@
 use core::f32;
 use std::fmt::Display;
 
-use avian2d::prelude::{Collider, LockedAxes, RigidBody};
+use avian2d::prelude::{Collider, RigidBody};
 use bevy::{
     app::{Plugin, Update},
     input::ButtonInput,
     log::info,
-    math::{IVec2, Vec3},
+    math::{Dir3, IVec2, Vec3},
     prelude::{
         Bundle, Changed, Commands, Component, Entity, Event, EventReader, EventWriter,
         IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform, With,
     },
-    sprite::TextureAtlas,
+    sprite::{Sprite, TextureAtlas},
     time::Time,
+    utils::default,
 };
 use bevy_ecs_ldtk::{
     app::{LdtkEntity, LdtkEntityAppExt},
     GridCoords, LdtkSpriteSheetBundle,
 };
+use bevy_tnua::prelude::{TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
 use crate::{
     components::component::{AnimationConfig, Health, MovementMultiplier},
-    identifier,
-    util::GridCoordConst,
-    world,
+    identifier, util, world,
 };
 
 pub struct PlayerPlugin;
 
-pub const AIR_ACCELERATION: f32 = 700.;
-pub const ACCELERATION: f32 = 1600.;
 pub const PLAYER_SIZE: (f32, f32) = (16., 19.);
+const PLAYER_SIZE_IVEC: IVec2 = IVec2 {
+    x: PLAYER_SIZE.0 as i32,
+    y: PLAYER_SIZE.1 as i32,
+};
+
+#[allow(dead_code)]
+const JUMP_KEYS: [KeyCode; 3] = [KeyCode::KeyW, KeyCode::Space, KeyCode::ArrowUp];
+const MOVE_LEFT_KEYS: [KeyCode; 2] = [KeyCode::KeyA, KeyCode::ArrowLeft];
+const MOVE_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::KeyD, KeyCode::ArrowRight];
+
+const AIR_ACCELERATION: f32 = 700.;
+const ACCELERATION: f32 = 1600.;
 
 identifier!(PLAYER_STILL, "entity.player.still");
 
@@ -62,15 +72,23 @@ impl Default for PlayerResource {
 
 #[derive(Component, Default)]
 #[allow(unused)]
-pub struct Player {
-    direction: Direction,
-}
+pub struct Player;
 
 #[derive(Component, Default, PartialEq, Eq)]
 pub enum Direction {
     L,
     #[default]
     R,
+}
+
+impl Direction {
+    /// Returns whether the sprite should be flipped, reliant on the basis that the sprites are originally drawn facing right.
+    fn should_flip_sprite(&self) -> bool {
+        match self {
+            Direction::R => false,
+            _ => false,
+        }
+    }
 }
 
 impl Display for Direction {
@@ -105,7 +123,8 @@ struct PlayerBundle {
     animation_config: AnimationConfig,
     collider: Collider,
     rigid_body: RigidBody,
-    locked_axes: LockedAxes,
+    controller: TnuaControllerBundle,
+    direction: Direction,
 }
 
 impl LdtkEntity for PlayerBundle {
@@ -117,6 +136,7 @@ impl LdtkEntity for PlayerBundle {
         _asset_server: &bevy::prelude::AssetServer,
         texture_atlases: &mut bevy::prelude::Assets<bevy::prelude::TextureAtlasLayout>,
     ) -> Self {
+        info!("playerbundle called");
         Self {
             sprite_sheet_bundle: bevy_ecs_ldtk::utils::sprite_sheet_bundle_from_entity_info(
                 entity_instance,
@@ -134,7 +154,8 @@ impl LdtkEntity for PlayerBundle {
             movement_multiplier: MovementMultiplier::default(),
             animation_config: AnimationConfig::new(0, 2, 18),
             rigid_body: RigidBody::Dynamic,
-            locked_axes: LockedAxes::ROTATION_LOCKED,
+            controller: TnuaControllerBundle::default(),
+            direction: Direction::default(),
         }
     }
 }
@@ -166,8 +187,14 @@ impl Plugin for PlayerPlugin {
 
         app.add_systems(
             Update,
-            (logic_move_controller, visual_move_controller).chain(),
+            (
+                logic_move_controller,
+                visual_move_controller,
+                flip_sprite_direction,
+            )
+                .chain(),
         );
+
         app.add_systems(Update, (player_void_death, player_death).chain());
         app.add_systems(Update, (exec_animations));
 
@@ -175,35 +202,77 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn logic_move_controller(
-    mut query: Query<&mut GridCoords, With<Player>>,
-    keyboard: Res<ButtonInput<KeyCode>>,
+// fn logic_move_controller(
+//     mut query: Query<&mut GridCoords, With<Player>>,
+//     keyboard: Res<ButtonInput<KeyCode>>,
+// ) {
+//     let movement_direction = if keyboard.just_pressed(KeyCode::Space) {
+//         GridCoords::Y
+//     } else if keyboard.just_pressed(KeyCode::KeyA) {
+//         GridCoords::NEG_X
+//     } else if keyboard.just_pressed(KeyCode::KeyD) {
+//         GridCoords::X
+//     } else {
+//         GridCoords::ZERO
+//     };
+//
+//     for mut coords in &mut query {
+//         let dest = *coords + movement_direction;
+//         *coords = dest;
+//     }
+// }
+
+// fn visual_move_controller(
+//     mut query: Query<(&mut Transform, &GridCoords), (Changed<GridCoords>, With<Player>)>,
+// ) {
+//     for (mut transform, grid_coords) in &mut query {
+//         transform.translation = bevy_ecs_ldtk::utils::grid_coords_to_translation(
+//             *grid_coords,
+//             IVec2::from_array([PLAYER_SIZE.0 as i32, PLAYER_SIZE.1 as i32]),
+//         )
+//         .extend(transform.translation.z);
+//     }
+// }
+
+fn visual_move_controller(
+    mut query: Query<(&mut TnuaController, &mut Direction), With<Player>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    let movement_direction = if keyboard.just_pressed(KeyCode::Space) {
-        GridCoords::Y
-    } else if keyboard.just_pressed(KeyCode::KeyA) {
-        GridCoords::NEG_X
-    } else if keyboard.just_pressed(KeyCode::KeyD) {
-        GridCoords::X
-    } else {
-        GridCoords::ZERO
+    let Ok((mut controller, mut direction)) = query.get_single_mut() else {
+        return;
     };
 
-    for mut coords in &mut query {
-        let dest = *coords + movement_direction;
-        *coords = dest;
+    let mut move_direction = Vec3::ZERO;
+
+    if keyboard_input.any_pressed(MOVE_LEFT_KEYS) {
+        move_direction += Vec3::NEG_Z;
+        *direction = Direction::L;
+    } else if keyboard_input.any_pressed(MOVE_RIGHT_KEYS) {
+        move_direction += Vec3::Z;
+        *direction = Direction::R;
+    }
+
+    controller.basis(TnuaBuiltinWalk {
+        desired_velocity: move_direction,
+        float_height: PLAYER_SIZE.1,
+        desired_forward: Some(Dir3::X),
+        acceleration: ACCELERATION,
+        air_acceleration: AIR_ACCELERATION,
+        ..default()
+    });
+}
+
+fn logic_move_controller(mut query: Query<(&mut GridCoords, &Transform), Changed<GridCoords>>) {
+    for (mut grid_coords, transform) in &mut query {
+        *grid_coords =
+            util::convert::grid_coords_from_vec3(transform.translation, PLAYER_SIZE_IVEC);
     }
 }
 
-fn visual_move_controller(
-    mut query: Query<(&mut Transform, &GridCoords), (Changed<GridCoords>, With<Player>)>,
-) {
-    for (mut transform, grid_coords) in &mut query {
-        transform.translation = bevy_ecs_ldtk::utils::grid_coords_to_translation(
-            *grid_coords,
-            IVec2::from_array([PLAYER_SIZE.0 as i32, PLAYER_SIZE.1 as i32]),
-        )
-        .extend(transform.translation.z);
+// Possibly move this to entity.rs
+fn flip_sprite_direction(mut query: Query<(&Direction, &mut Sprite), Changed<Direction>>) {
+    for (direction, mut sprite) in &mut query {
+        sprite.flip_x = direction.should_flip_sprite();
     }
 }
 

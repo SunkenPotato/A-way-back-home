@@ -55,17 +55,18 @@ pub fn debug_mode(app: &mut App) {
 }
 
 pub mod convert {
-    use bevy::math::{Vec2, Vec3};
+    use bevy::math::{IVec2, Vec2, Vec3};
+    use bevy_ecs_ldtk::GridCoords;
 
     // BEGIN - trait definitions
     pub trait LocalFrom<T>: Sized {
         #[must_use]
-        fn from(value: T) -> Self;
+        fn local_from(value: T) -> Self;
     }
 
     pub trait LocalInto<T>: Sized {
         #[must_use]
-        fn into(self) -> T;
+        fn local_into(self) -> T;
     }
     // END - trait definitions
 
@@ -75,14 +76,14 @@ pub mod convert {
         U: LocalFrom<T>,
     {
         #[inline]
-        fn into(self) -> U {
-            U::from(self)
+        fn local_into(self) -> U {
+            U::local_from(self)
         }
     }
 
     impl<T> LocalFrom<T> for T {
         #[inline]
-        fn from(value: T) -> Self {
+        fn local_from(value: T) -> Self {
             value
         }
     }
@@ -91,7 +92,7 @@ pub mod convert {
 
     impl LocalFrom<Vec3> for Vec2 {
         #[inline]
-        fn from(value: Vec3) -> Self {
+        fn local_from(value: Vec3) -> Self {
             Self {
                 x: value.x,
                 y: value.y,
@@ -101,11 +102,31 @@ pub mod convert {
 
     impl LocalFrom<Vec3> for bevy::a11y::accesskit::Vec2 {
         #[inline]
-        fn from(value: Vec3) -> Self {
+        fn local_from(value: Vec3) -> Self {
             Self {
                 x: value.x as f64,
                 y: value.y as f64,
             }
+        }
+    }
+
+    impl LocalFrom<(f32, f32)> for (i32, i32) {
+        /// Performs a lossy conversion
+        fn local_from(value: (f32, f32)) -> Self {
+            (value.0 as i32, value.1 as i32)
+        }
+    }
+
+    pub fn grid_coords_from_vec3(translation: Vec3, tile_size: IVec2) -> GridCoords {
+        let vec3_tile_size = tile_size.as_vec2().extend(1.);
+
+        let relative_translation = translation - (vec3_tile_size / 2.);
+
+        let tile_coords = (relative_translation / vec3_tile_size).round();
+
+        GridCoords {
+            x: tile_coords.x as i32,
+            y: tile_coords.y as i32,
         }
     }
 }
