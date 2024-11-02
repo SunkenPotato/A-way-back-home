@@ -1,5 +1,8 @@
 use avian2d::prelude::PhysicsDebugPlugin;
-use bevy::app::App;
+use bevy::{
+    app::App,
+    log::{Level, LogPlugin},
+};
 use bevy_ecs_ldtk::GridCoords;
 
 pub mod consts {
@@ -19,6 +22,7 @@ pub mod consts {
 }
 
 const PHYSICS_DEBUG: u32 = 2_u32.pow(0);
+const LOG_DEBUG: u32 = 2_u32.pow(1);
 
 pub trait GridCoordConst {
     const NEG_X: GridCoords;
@@ -35,10 +39,11 @@ impl GridCoordConst for GridCoords {
     const X: GridCoords = GridCoords { x: 1, y: 0 };
 }
 
-pub fn debug_mode(app: &mut App) {
+pub fn debug_mode(app: &mut App, log_plugin: &mut LogPlugin) {
     let Some(flags) = option_env!("DEBUG") else {
         return;
     };
+
     let bitflags = match flags.parse::<u32>() {
         Ok(v) => v,
         Err(e) => {
@@ -52,21 +57,43 @@ pub fn debug_mode(app: &mut App) {
     if (bitflags & PHYSICS_DEBUG) > 0 {
         app.add_plugins(PhysicsDebugPlugin::default());
     }
+
+    if (bitflags & LOG_DEBUG) > 0 {
+        log_plugin.level = Level::DEBUG;
+    }
 }
 
 pub mod convert {
-    use bevy::math::{Vec2, Vec3};
+    use std::convert::Infallible;
+
+    use bevy::math::{IVec2, Vec2, Vec3};
+    use bevy_ecs_ldtk::GridCoords;
 
     // BEGIN - trait definitions
     pub trait LocalFrom<T>: Sized {
         #[must_use]
-        fn from(value: T) -> Self;
+        fn local_from(value: T) -> Self;
     }
 
     pub trait LocalInto<T>: Sized {
         #[must_use]
-        fn into(self) -> T;
+        fn local_into(self) -> T;
     }
+
+    pub trait LTryFrom<T>: Sized {
+        type Error;
+
+        #[must_use]
+        fn l_try_from(value: T) -> Result<Self, Self::Error>;
+    }
+
+    pub trait LTryInto<T>: Sized {
+        type Error;
+
+        #[must_use]
+        fn l_try_into(self) -> Result<T, Self::Error>;
+    }
+
     // END - trait definitions
 
     // BEGIN - generic impls
@@ -75,15 +102,38 @@ pub mod convert {
         U: LocalFrom<T>,
     {
         #[inline]
-        fn into(self) -> U {
-            U::from(self)
+        fn local_into(self) -> U {
+            U::local_from(self)
         }
     }
 
     impl<T> LocalFrom<T> for T {
         #[inline]
-        fn from(value: T) -> Self {
+        fn local_from(value: T) -> Self {
             value
+        }
+    }
+
+    impl<T, U> LTryInto<U> for T
+    where
+        U: LTryFrom<T>,
+    {
+        type Error = U::Error;
+
+        #[inline]
+        fn l_try_into(self) -> Result<U, Self::Error> {
+            U::l_try_from(self)
+        }
+    }
+
+    impl<T, U> LTryFrom<U> for T
+    where
+        U: Into<T>,
+    {
+        type Error = Infallible;
+
+        fn l_try_from(value: U) -> Result<Self, Self::Error> {
+            Ok(U::into(value))
         }
     }
 
@@ -91,7 +141,7 @@ pub mod convert {
 
     impl LocalFrom<Vec3> for Vec2 {
         #[inline]
-        fn from(value: Vec3) -> Self {
+        fn local_from(value: Vec3) -> Self {
             Self {
                 x: value.x,
                 y: value.y,
@@ -101,11 +151,31 @@ pub mod convert {
 
     impl LocalFrom<Vec3> for bevy::a11y::accesskit::Vec2 {
         #[inline]
-        fn from(value: Vec3) -> Self {
+        fn local_from(value: Vec3) -> Self {
             Self {
                 x: value.x as f64,
                 y: value.y as f64,
             }
+        }
+    }
+
+    impl LocalFrom<(f32, f32)> for (i32, i32) {
+        /// Performs a lossy conversion
+        fn local_from(value: (f32, f32)) -> Self {
+            (value.0 as i32, value.1 as i32)
+        }
+    }
+
+    pub fn grid_coords_from_vec3(translation: Vec3, tile_size: IVec2) -> GridCoords {
+        let vec3_tile_size = tile_size.as_vec2().extend(1.);
+
+        let relative_translation = translation - (vec3_tile_size / 2.);
+
+        let tile_coords = (relative_translation / vec3_tile_size).round();
+
+        GridCoords {
+            x: tile_coords.x as i32,
+            y: tile_coords.y as i32,
         }
     }
 }

@@ -11,7 +11,7 @@
 	"iid": "c3f9f7a0-73f0-11ef-88bf-4b81d676d861",
 	"jsonVersion": "1.5.3",
 	"appBuildId": 473703,
-	"nextUid": 17,
+	"nextUid": 19,
 	"identifierStyle": "Capitalize",
 	"toc": [],
 	"worldLayout": "LinearHorizontal",
@@ -523,7 +523,48 @@
 			"savedSelections": [],
 			"cachedPixelData": { "opaqueTiles": "1111111011000000", "averageColors": "f664f664f664f664f433f433f4330000f444f444000000000000065500000000" }
 		}
-	], "enums": [], "externalEnums": [], "levelFields": [] },
+	], "enums": [], "externalEnums": [], "levelFields": [
+		{
+			"identifier": "Spawnpoint",
+			"doc": null,
+			"__type": "String",
+			"uid": 18,
+			"type": "F_String",
+			"isArray": false,
+			"canBeNull": false,
+			"arrayMinLength": null,
+			"arrayMaxLength": null,
+			"editorDisplayMode": "Hidden",
+			"editorDisplayScale": 1,
+			"editorDisplayPos": "Above",
+			"editorLinkStyle": "StraightArrow",
+			"editorDisplayColor": null,
+			"editorAlwaysShow": false,
+			"editorShowInWorld": true,
+			"editorCutLongValues": true,
+			"editorTextSuffix": null,
+			"editorTextPrefix": null,
+			"useForSmartColor": false,
+			"exportToToc": false,
+			"searchable": false,
+			"min": null,
+			"max": null,
+			"regex": null,
+			"acceptFileTypes": null,
+			"defaultOverride": {
+				"id": "V_String",
+				"params": ["0;0"]
+			},
+			"textLanguageMode": null,
+			"symmetricalRef": false,
+			"autoChainRef": true,
+			"allowOutOfLevelRef": true,
+			"allowedRefs": "OnlySame",
+			"allowedRefsEntityUid": null,
+			"allowedRefTags": [],
+			"tilesetUid": null
+		}
+	] },
 	"levels": [
 		{
 			"identifier": "Level_0",
@@ -544,7 +585,10 @@
 			"__smartColor": "#ADADB5",
 			"__bgPos": null,
 			"externalRelPath": null,
-			"fieldInstances": [],
+			"fieldInstances": [{ "__identifier": "Spawnpoint", "__type": "String", "__value": "1;6", "__tile": null, "defUid": 18, "realEditorValues": [{
+				"id": "V_String",
+				"params": ["1;6"]
+			}] }],
 			"layerInstances": [
 				{
 					"__identifier": "Entities",
@@ -572,7 +616,7 @@
 					"entityInstances": [
 						{
 							"__identifier": "Player",
-							"__grid": [1,6],
+							"__grid": [2,6],
 							"__pivot": [0.5,0.5],
 							"__tags": [],
 							"__tile": { "tilesetUid": 1, "x": 0, "y": 0, "w": 32, "h": 32 },
@@ -581,7 +625,7 @@
 							"width": 16,
 							"height": 19,
 							"defUid": 15,
-							"px": [16,96],
+							"px": [32,96],
 							"fieldInstances": []
 						},
 						{

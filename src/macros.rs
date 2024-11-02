@@ -55,3 +55,15 @@ macro_rules! warn_fn {
         bevy::log::warn_once!(message);
     }
 }
+
+#[macro_export]
+/// Shorthand default impl macro
+macro_rules! default_impl {
+    ($type:ident, $val:expr) => {
+        impl Default for $type {
+            fn default() -> Self {
+                $val
+            }
+        }
+    };
+}
