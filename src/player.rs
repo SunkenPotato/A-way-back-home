@@ -6,7 +6,7 @@ use bevy::{
     app::{Plugin, Update},
     input::ButtonInput,
     log::info,
-    math::{Dir3, IVec2, Vec3},
+    math::{IVec2, Vec3},
     prelude::{
         Bundle, Changed, Commands, Component, Entity, Event, EventReader, EventWriter,
         IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform, With,
@@ -136,7 +136,6 @@ impl LdtkEntity for PlayerBundle {
         _asset_server: &bevy::prelude::AssetServer,
         texture_atlases: &mut bevy::prelude::Assets<bevy::prelude::TextureAtlasLayout>,
     ) -> Self {
-        info!("playerbundle called");
         Self {
             sprite_sheet_bundle: bevy_ecs_ldtk::utils::sprite_sheet_bundle_from_entity_info(
                 entity_instance,
@@ -202,38 +201,6 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-// fn logic_move_controller(
-//     mut query: Query<&mut GridCoords, With<Player>>,
-//     keyboard: Res<ButtonInput<KeyCode>>,
-// ) {
-//     let movement_direction = if keyboard.just_pressed(KeyCode::Space) {
-//         GridCoords::Y
-//     } else if keyboard.just_pressed(KeyCode::KeyA) {
-//         GridCoords::NEG_X
-//     } else if keyboard.just_pressed(KeyCode::KeyD) {
-//         GridCoords::X
-//     } else {
-//         GridCoords::ZERO
-//     };
-//
-//     for mut coords in &mut query {
-//         let dest = *coords + movement_direction;
-//         *coords = dest;
-//     }
-// }
-
-// fn visual_move_controller(
-//     mut query: Query<(&mut Transform, &GridCoords), (Changed<GridCoords>, With<Player>)>,
-// ) {
-//     for (mut transform, grid_coords) in &mut query {
-//         transform.translation = bevy_ecs_ldtk::utils::grid_coords_to_translation(
-//             *grid_coords,
-//             IVec2::from_array([PLAYER_SIZE.0 as i32, PLAYER_SIZE.1 as i32]),
-//         )
-//         .extend(transform.translation.z);
-//     }
-// }
-
 fn visual_move_controller(
     mut query: Query<(&mut TnuaController, &mut Direction), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -245,17 +212,26 @@ fn visual_move_controller(
     let mut move_direction = Vec3::ZERO;
 
     if keyboard_input.any_pressed(MOVE_LEFT_KEYS) {
-        move_direction += Vec3::NEG_Z;
+        move_direction += Vec3::NEG_X;
         *direction = Direction::L;
+        bevy::log::debug!(
+            "Left key pressed, values: \n\tmd: {move_direction}\n\td:{}",
+            *direction
+        )
     } else if keyboard_input.any_pressed(MOVE_RIGHT_KEYS) {
-        move_direction += Vec3::Z;
+        bevy::log::debug!(
+            "Right key pressed, values: \n\tmd: {move_direction}\n\td: {}",
+            *direction
+        );
+        move_direction += Vec3::X;
         *direction = Direction::R;
     }
+
+    move_direction *= 10.;
 
     controller.basis(TnuaBuiltinWalk {
         desired_velocity: move_direction,
         float_height: PLAYER_SIZE.1,
-        desired_forward: Some(Dir3::X),
         acceleration: ACCELERATION,
         air_acceleration: AIR_ACCELERATION,
         ..default()

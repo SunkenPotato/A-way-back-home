@@ -585,9 +585,9 @@
 			"__smartColor": "#ADADB5",
 			"__bgPos": null,
 			"externalRelPath": null,
-			"fieldInstances": [{ "__identifier": "Spawnpoint", "__type": "String", "__value": "0; 6", "__tile": null, "defUid": 18, "realEditorValues": [{
+			"fieldInstances": [{ "__identifier": "Spawnpoint", "__type": "String", "__value": "1;6", "__tile": null, "defUid": 18, "realEditorValues": [{
 				"id": "V_String",
-				"params": ["0; 6"]
+				"params": ["1;6"]
 			}] }],
 			"layerInstances": [
 				{

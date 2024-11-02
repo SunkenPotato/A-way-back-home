@@ -1,5 +1,6 @@
 #![allow(unused_parens)]
 #![deny(unsafe_code, reason = "This should be a safe program")]
+#![deny(unused_imports, reason = "Don't forget me")]
 
 pub mod components;
 pub mod entity;
@@ -17,22 +18,29 @@ use bevy::math::Vec2;
 use bevy::prelude::{ImagePlugin, PluginGroup};
 use bevy::{app::App, DefaultPlugins};
 use bevy_ecs_ldtk::LdtkPlugin;
+use bevy_tnua::prelude::TnuaControllerPlugin;
+use bevy_tnua_avian2d::TnuaAvian2dPlugin;
 use components::asset::AssetPlugin;
 use entity::health::HealthPlugin;
 
 fn main() {
-    let log_plugin = LogPlugin {
-        filter: "wgpu=error,naga=warn,avian2d=error".to_string(),
+    let mut app = App::new();
+
+    let mut log_plugin = LogPlugin {
+        filter: "wgpu=error,naga=warn,avian2d=error,".to_string(),
         ..Default::default()
     };
 
-    let mut app = App::new();
+    util::debug_mode(&mut app, &mut log_plugin);
+
     app.add_plugins(
         DefaultPlugins
             .set(ImagePlugin::default_nearest())
             .set(log_plugin),
     )
     .add_plugins(PhysicsPlugins::default())
+    .add_plugins(TnuaControllerPlugin::default())
+    .add_plugins(TnuaAvian2dPlugin::default())
     .add_plugins(render::camera::CameraPlugin)
     .add_plugins(player::PlayerPlugin)
     .add_plugins(world::loader::WorldPlugin)
@@ -41,8 +49,6 @@ fn main() {
     .add_plugins(HealthPlugin)
     .add_plugins(LdtkPlugin)
     .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.));
-
-    util::debug_mode(&mut app);
 
     app.run();
 }

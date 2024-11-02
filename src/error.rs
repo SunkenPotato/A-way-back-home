@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use bevy::log::warn;
+use bevy::log::warn_once;
 
 pub struct FatalError<T = &'static str>
 where
@@ -37,9 +37,10 @@ where
     T: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        bevy::log::info!("Formatting WarnError...");
         write!(
             f,
-            "WarnError:\n\tPossible bug: {}\n\tMessage:{}\n\tCode:{}",
+            "WarnError:\n\tPossible bug: {}\n\tMessage: {}\n\tCode: {}",
             self.possible_bug, self.message, self.warn_code
         )
     }
@@ -58,11 +59,21 @@ where
     }
 
     #[track_caller]
+    #[inline]
     pub fn trigger(&self) {
-        warn!(
-            "WarnError triggered from {}: {}",
+        self.trigger_msg("[]")
+    }
+
+    #[track_caller]
+    pub fn trigger_msg<M>(&self, message: M)
+    where
+        M: Display,
+    {
+        warn_once!(
+            "WarnError triggered from {}: {}. \nAdditional information: {}",
             core::panic::Location::caller(),
-            self
+            self,
+            message
         )
     }
 }
@@ -103,6 +114,9 @@ pub mod errors {
     // START - WarnError
     pub const LEVEL_NOT_FOUND: WarnError =
         WarnError::new("The current level could not be obtained", 0x001, true);
+
+    pub const SPAWNPOINT_ERR: WarnError =
+        WarnError::new("Could not obtain spawnpoint for current level", 0x002, true);
 
     // END - WarnError
 }

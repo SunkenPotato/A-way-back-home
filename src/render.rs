@@ -24,8 +24,8 @@ pub mod camera {
             };
 
             let mut camera = Camera2dBundle::default();
-            camera.projection.scale = 1. / 3.5;
-            camera.transform.translation.x += window.height() / 3.5;
+            camera.projection.scale = 1. / 5.;
+            camera.transform.translation.x += window.height() / 5.;
             camera.transform.translation.y += 105.;
             commands.spawn(camera);
         }

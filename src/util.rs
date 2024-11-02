@@ -1,5 +1,8 @@
 use avian2d::prelude::PhysicsDebugPlugin;
-use bevy::app::App;
+use bevy::{
+    app::App,
+    log::{Level, LogPlugin},
+};
 use bevy_ecs_ldtk::GridCoords;
 
 pub mod consts {
@@ -19,6 +22,7 @@ pub mod consts {
 }
 
 const PHYSICS_DEBUG: u32 = 2_u32.pow(0);
+const LOG_DEBUG: u32 = 2_u32.pow(1);
 
 pub trait GridCoordConst {
     const NEG_X: GridCoords;
@@ -35,10 +39,11 @@ impl GridCoordConst for GridCoords {
     const X: GridCoords = GridCoords { x: 1, y: 0 };
 }
 
-pub fn debug_mode(app: &mut App) {
+pub fn debug_mode(app: &mut App, log_plugin: &mut LogPlugin) {
     let Some(flags) = option_env!("DEBUG") else {
         return;
     };
+
     let bitflags = match flags.parse::<u32>() {
         Ok(v) => v,
         Err(e) => {
@@ -52,9 +57,15 @@ pub fn debug_mode(app: &mut App) {
     if (bitflags & PHYSICS_DEBUG) > 0 {
         app.add_plugins(PhysicsDebugPlugin::default());
     }
+
+    if (bitflags & LOG_DEBUG) > 0 {
+        log_plugin.level = Level::DEBUG;
+    }
 }
 
 pub mod convert {
+    use std::convert::Infallible;
+
     use bevy::math::{IVec2, Vec2, Vec3};
     use bevy_ecs_ldtk::GridCoords;
 
@@ -68,6 +79,21 @@ pub mod convert {
         #[must_use]
         fn local_into(self) -> T;
     }
+
+    pub trait LTryFrom<T>: Sized {
+        type Error;
+
+        #[must_use]
+        fn l_try_from(value: T) -> Result<Self, Self::Error>;
+    }
+
+    pub trait LTryInto<T>: Sized {
+        type Error;
+
+        #[must_use]
+        fn l_try_into(self) -> Result<T, Self::Error>;
+    }
+
     // END - trait definitions
 
     // BEGIN - generic impls
@@ -85,6 +111,29 @@ pub mod convert {
         #[inline]
         fn local_from(value: T) -> Self {
             value
+        }
+    }
+
+    impl<T, U> LTryInto<U> for T
+    where
+        U: LTryFrom<T>,
+    {
+        type Error = U::Error;
+
+        #[inline]
+        fn l_try_into(self) -> Result<U, Self::Error> {
+            U::l_try_from(self)
+        }
+    }
+
+    impl<T, U> LTryFrom<U> for T
+    where
+        U: Into<T>,
+    {
+        type Error = Infallible;
+
+        fn l_try_from(value: U) -> Result<Self, Self::Error> {
+            Ok(U::into(value))
         }
     }
 
