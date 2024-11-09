@@ -21,8 +21,8 @@ pub mod consts {
     };
 }
 
-const PHYSICS_DEBUG: u32 = 2_u32.pow(0);
-const LOG_DEBUG: u32 = 2_u32.pow(1);
+const PHYSICS_DEBUG: u32 = 0b001;
+const LOG_DEBUG: u32 = 0b010;
 
 pub trait GridCoordConst {
     const NEG_X: GridCoords;
@@ -54,11 +54,11 @@ pub fn debug_mode(app: &mut App, log_plugin: &mut LogPlugin) {
         }
     };
 
-    if (bitflags & PHYSICS_DEBUG) > 0 {
+    if (bitflags | PHYSICS_DEBUG) > 0 {
         app.add_plugins(PhysicsDebugPlugin::default());
     }
 
-    if (bitflags & LOG_DEBUG) > 0 {
+    if (bitflags | LOG_DEBUG) > 0 {
         log_plugin.level = Level::DEBUG;
     }
 }

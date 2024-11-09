@@ -33,7 +33,7 @@ pub mod loader {
 
     const SPAWNPOINT_IDENT: &'static str = "Spawnpoint";
 
-    #[derive(Event)]
+    #[derive(Event, Deref)]
     pub struct ChangeLevel(usize);
 
     impl Plugin for WorldPlugin {
@@ -129,25 +129,6 @@ pub mod loader {
 
         Err(SPError::InvalidFormat)
     }
-    // REFERNCE for future
-    /**
-    fn get_spawnpoint_from_fields(
-        fields: &Vec<FieldInstance>,
-    ) -> Option<Result<SpawnPoint, SPError>> {
-        for field in fields.iter() {
-            if field.identifier == SPAWNPOINT_IDENT {
-                match field.value {
-                    FieldValue::String(v) => match v {
-                        Some(v) => v,
-                        Err(_) => return Some(Err("Expected a non-empty field!")),
-                    },
-                    _ => return Ok(None),
-                }
-            }
-        }
-
-        None
-    }**/
 
     // END SYS
 

@@ -37,7 +37,6 @@ where
     T: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        bevy::log::info!("Formatting WarnError...");
         write!(
             f,
             "WarnError:\n\tPossible bug: {}\n\tMessage: {}\n\tCode: {}",
@@ -90,23 +89,21 @@ where
     }
 
     #[track_caller]
-    #[allow(
-        unsafe_code,
-        reason = "Function is not unsafe, consequences might be bad."
-    )]
-    /// Not an unsafe method in itself, but the consequences might be.
-    pub unsafe fn trigger(self) -> ! {
-        bevy::log::error!(
+    #[must_use = "Calling this may have an unexpected impact on the game loop"]
+    pub fn exit_with_fatal_error(self) -> ! {
+        panic!(
             "Fatal in-game error triggered from location: {}; {self}",
             core::panic::Location::caller()
-        );
-        std::process::exit(self.exit_code)
+        )
     }
 }
 
 pub mod errors {
-    // START - FatalError
+    use super::FatalError;
 
+    // START - FatalError
+    pub const WINDOWS_NOT_INSTANTIATED: FatalError =
+        FatalError::new("Windows have not yet been instantiated!", 0x001);
     // END - FatalError
 
     use super::WarnError;

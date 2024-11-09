@@ -19,22 +19,19 @@ use bevy_ecs_ldtk::{
     app::{LdtkEntity, LdtkEntityAppExt},
     GridCoords, LdtkSpriteSheetBundle,
 };
-use bevy_tnua::prelude::{TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
+use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
 use crate::{
     components::component::{AnimationConfig, Health, MovementMultiplier},
-    identifier, util, world,
+    util,
 };
 
-pub struct PlayerPlugin;
-
-pub const PLAYER_SIZE: (f32, f32) = (16., 19.);
+pub const PLAYER_SIZE: (f32, f32) = (19., 19.);
 const PLAYER_SIZE_IVEC: IVec2 = IVec2 {
     x: PLAYER_SIZE.0 as i32,
     y: PLAYER_SIZE.1 as i32,
 };
 
-#[allow(dead_code)]
 const JUMP_KEYS: [KeyCode; 3] = [KeyCode::KeyW, KeyCode::Space, KeyCode::ArrowUp];
 const MOVE_LEFT_KEYS: [KeyCode; 2] = [KeyCode::KeyA, KeyCode::ArrowLeft];
 const MOVE_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::KeyD, KeyCode::ArrowRight];
@@ -42,7 +39,31 @@ const MOVE_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::KeyD, KeyCode::ArrowRight];
 const AIR_ACCELERATION: f32 = 700.;
 const ACCELERATION: f32 = 1600.;
 
-identifier!(PLAYER_STILL, "entity.player.still");
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.init_resource::<PlayerInitalSpawn>();
+
+        app.add_event::<SpawnPlayerEvent>();
+        app.add_event::<PlayerDeath>();
+
+        app.add_systems(
+            Update,
+            (
+                logic_move_controller,
+                visual_move_controller,
+                flip_sprite_direction,
+            )
+                .chain(),
+        );
+
+        app.add_systems(Update, (player_void_death, player_death).chain());
+        app.add_systems(Update, (exec_animations));
+
+        app.register_ldtk_entity::<PlayerBundle>("Player");
+    }
+}
 
 pub enum AnimationState {
     Standing,
@@ -50,28 +71,7 @@ pub enum AnimationState {
     Jumping,
 }
 
-#[derive(Resource)]
-#[allow(unused)]
-pub struct PlayerResource {
-    pub size_x: f32,
-    pub size_y: f32,
-    pub scale: Vec3,
-    pub scale_f32: f32,
-}
-
-impl Default for PlayerResource {
-    fn default() -> Self {
-        Self {
-            size_x: 16.,
-            size_y: 19.,
-            scale: world::loader::GLOBAL_SCALE,
-            scale_f32: 4.5,
-        }
-    }
-}
-
 #[derive(Component, Default)]
-#[allow(unused)]
 pub struct Player;
 
 #[derive(Component, Default, PartialEq, Eq)]
@@ -86,7 +86,7 @@ impl Direction {
     fn should_flip_sprite(&self) -> bool {
         match self {
             Direction::R => false,
-            _ => false,
+            _ => true,
         }
     }
 }
@@ -176,31 +176,6 @@ pub struct SpawnPlayerEvent;
 #[derive(Resource, Default)]
 pub struct PlayerInitalSpawn;
 
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.init_resource::<PlayerResource>();
-        app.init_resource::<PlayerInitalSpawn>();
-
-        app.add_event::<SpawnPlayerEvent>();
-        app.add_event::<PlayerDeath>();
-
-        app.add_systems(
-            Update,
-            (
-                logic_move_controller,
-                visual_move_controller,
-                flip_sprite_direction,
-            )
-                .chain(),
-        );
-
-        app.add_systems(Update, (player_void_death, player_death).chain());
-        app.add_systems(Update, (exec_animations));
-
-        app.register_ldtk_entity::<PlayerBundle>("Player");
-    }
-}
-
 fn visual_move_controller(
     mut query: Query<(&mut TnuaController, &mut Direction), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -227,15 +202,22 @@ fn visual_move_controller(
         *direction = Direction::R;
     }
 
-    move_direction *= 10.;
+    move_direction *= 90.;
 
     controller.basis(TnuaBuiltinWalk {
         desired_velocity: move_direction,
-        float_height: PLAYER_SIZE.1,
+        float_height: 10.,
         acceleration: ACCELERATION,
         air_acceleration: AIR_ACCELERATION,
         ..default()
     });
+
+    if keyboard_input.any_pressed(JUMP_KEYS) {
+        controller.action(TnuaBuiltinJump {
+            height: 30.,
+            ..default()
+        });
+    }
 }
 
 fn logic_move_controller(mut query: Query<(&mut GridCoords, &Transform), Changed<GridCoords>>) {
@@ -248,7 +230,9 @@ fn logic_move_controller(mut query: Query<(&mut GridCoords, &Transform), Changed
 // Possibly move this to entity.rs
 fn flip_sprite_direction(mut query: Query<(&Direction, &mut Sprite), Changed<Direction>>) {
     for (direction, mut sprite) in &mut query {
-        sprite.flip_x = direction.should_flip_sprite();
+        let flip_x = direction.should_flip_sprite();
+        sprite.flip_x = flip_x;
+        dbg!(flip_x);
     }
 }
 

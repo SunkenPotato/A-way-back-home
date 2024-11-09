@@ -1,6 +1,7 @@
 #![allow(unused_parens)]
 #![deny(unsafe_code, reason = "This should be a safe program")]
 #![deny(unused_imports, reason = "Don't forget me")]
+#![forbid(clippy::panic, reason = "Use FatalErrors instead")]
 
 pub mod components;
 pub mod entity;
@@ -20,7 +21,6 @@ use bevy::{app::App, DefaultPlugins};
 use bevy_ecs_ldtk::LdtkPlugin;
 use bevy_tnua::prelude::TnuaControllerPlugin;
 use bevy_tnua_avian2d::TnuaAvian2dPlugin;
-use components::asset::AssetPlugin;
 use entity::health::HealthPlugin;
 
 fn main() {
@@ -36,6 +36,7 @@ fn main() {
     app.add_plugins(
         DefaultPlugins
             .set(ImagePlugin::default_nearest())
+            .set(render::window_plugin())
             .set(log_plugin),
     )
     .add_plugins(PhysicsPlugins::default())
@@ -44,8 +45,6 @@ fn main() {
     .add_plugins(render::camera::CameraPlugin)
     .add_plugins(player::PlayerPlugin)
     .add_plugins(world::loader::WorldPlugin)
-    .add_plugins(render::sprite::SpritePlugin)
-    .add_plugins(AssetPlugin)
     .add_plugins(HealthPlugin)
     .add_plugins(LdtkPlugin)
     .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.));
