@@ -47,6 +47,7 @@ fn main() {
     .add_plugins(world::loader::WorldPlugin)
     .add_plugins(HealthPlugin)
     .add_plugins(LdtkPlugin)
+    .add_plugins(render::animate::AnimationPlugin)
     .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.));
 
     app.run();
