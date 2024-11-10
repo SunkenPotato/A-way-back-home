@@ -1,5 +1,4 @@
 pub mod component {
-
     use bevy::{
         math::Vec3,
         prelude::{Component, ReflectComponent},
@@ -26,14 +25,23 @@ pub mod component {
     #[reflect(Component)]
     pub struct Mortal;
 
-    #[derive(Component, Reflect)]
+    #[derive(Component, Reflect, Debug)]
     #[reflect(Component)]
     pub struct AnimationConfig {
-        pub first_sprite: usize,
-        pub last_sprite: usize,
+        pub sprite_indices: SpriteIndices,
         pub fps: u8,
         pub frame_timer: Timer,
     }
+
+    #[derive(Component, Reflect, Debug)]
+    #[reflect(Component)]
+    pub struct SpriteIndices {
+        pub first_sprite: usize,
+        pub last_sprite: usize,
+    }
+
+    #[derive(Component)]
+    pub struct Animatable;
 
     pub mod impls {
         use std::{
@@ -44,7 +52,7 @@ pub mod component {
 
         use bevy::{math::Vec3, time::Timer};
 
-        use super::{AnimationConfig, Damage, Health, MovementMultiplier};
+        use super::{AnimationConfig, Damage, Health, MovementMultiplier, SpriteIndices};
 
         impl Default for MovementMultiplier {
             fn default() -> Self {
@@ -133,7 +141,8 @@ pub mod component {
 
         impl Display for AnimationConfig {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "AnimationConfig {{\n\tfirst_sprite: {},\n\tlast_sprite: {},\n\tfps: {},\n\tframe_timer: {:#?}}}", self.first_sprite, self.last_sprite, self.fps, self.frame_timer)
+                let sprite_indices = &self.sprite_indices;
+                write!(f, "AnimationConfig {{\n\tfirst_sprite: {},\n\tlast_sprite: {},\n\tfps: {},\n\tframe_timer: {:#?}}}", sprite_indices.first_sprite, sprite_indices.last_sprite, self.fps, self.frame_timer)
             }
         }
 
@@ -144,10 +153,9 @@ pub mod component {
         }
 
         impl AnimationConfig {
-            pub fn new(first: usize, last: usize, fps: u8) -> Self {
+            pub fn new(sprite_indices: SpriteIndices, fps: u8) -> Self {
                 Self {
-                    first_sprite: first,
-                    last_sprite: last,
+                    sprite_indices,
                     fps,
                     frame_timer: Self::timer_from_fps(fps),
                 }
@@ -158,6 +166,15 @@ pub mod component {
                     Duration::from_secs_f32(1.0 / (fps as f32)),
                     bevy::time::TimerMode::Once,
                 )
+            }
+        }
+
+        impl SpriteIndices {
+            pub const fn new(first_sprite: usize, last_sprite: usize) -> Self {
+                Self {
+                    first_sprite,
+                    last_sprite,
+                }
             }
         }
     }

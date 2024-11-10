@@ -11,8 +11,7 @@ use bevy::{
         Bundle, Changed, Commands, Component, Entity, Event, EventReader, EventWriter,
         IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform, With,
     },
-    sprite::{Sprite, TextureAtlas},
-    time::Time,
+    sprite::Sprite,
     utils::default,
 };
 use bevy_ecs_ldtk::{
@@ -22,7 +21,9 @@ use bevy_ecs_ldtk::{
 use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
 use crate::{
-    components::component::{AnimationConfig, Health, MovementMultiplier},
+    components::component::{
+        Animatable, AnimationConfig, Health, MovementMultiplier, SpriteIndices,
+    },
     util,
 };
 
@@ -38,6 +39,10 @@ const MOVE_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::KeyD, KeyCode::ArrowRight];
 
 const AIR_ACCELERATION: f32 = 700.;
 const ACCELERATION: f32 = 1600.;
+
+const ANIMATION_FPS: u8 = 10;
+const WALK_RIGHT_INDICES: SpriteIndices = SpriteIndices::new(0, 2);
+const WALK_LEFT_INDICES: SpriteIndices = SpriteIndices::new(3, 5);
 
 pub struct PlayerPlugin;
 
@@ -59,7 +64,6 @@ impl Plugin for PlayerPlugin {
         );
 
         app.add_systems(Update, (player_void_death, player_death).chain());
-        app.add_systems(Update, (exec_animations));
 
         app.register_ldtk_entity::<PlayerBundle>("Player");
     }
@@ -125,6 +129,7 @@ struct PlayerBundle {
     rigid_body: RigidBody,
     controller: TnuaControllerBundle,
     direction: Direction,
+    animatable: Animatable,
 }
 
 impl LdtkEntity for PlayerBundle {
@@ -151,10 +156,11 @@ impl LdtkEntity for PlayerBundle {
             collider: Collider::rectangle(PLAYER_SIZE.0, PLAYER_SIZE.1),
             player: Player::default(),
             movement_multiplier: MovementMultiplier::default(),
-            animation_config: AnimationConfig::new(0, 2, 18),
+            animation_config: AnimationConfig::new(WALK_RIGHT_INDICES, ANIMATION_FPS),
             rigid_body: RigidBody::Dynamic,
             controller: TnuaControllerBundle::default(),
             direction: Direction::default(),
+            animatable: Animatable,
         }
     }
 }
@@ -177,29 +183,35 @@ pub struct SpawnPlayerEvent;
 pub struct PlayerInitalSpawn;
 
 fn visual_move_controller(
-    mut query: Query<(&mut TnuaController, &mut Direction), With<Player>>,
+    mut query: Query<(&mut TnuaController, &mut AnimationConfig), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    let Ok((mut controller, mut direction)) = query.get_single_mut() else {
+    let Ok((mut controller, mut animation_config)) = query.get_single_mut() else {
         return;
     };
 
     let mut move_direction = Vec3::ZERO;
 
-    if keyboard_input.any_pressed(MOVE_LEFT_KEYS) {
+    let left_keys_pressed = keyboard_input.any_pressed(MOVE_LEFT_KEYS);
+    let right_keys_pressed = keyboard_input.any_pressed(MOVE_RIGHT_KEYS);
+
+    if left_keys_pressed {
         move_direction += Vec3::NEG_X;
-        *direction = Direction::L;
-        bevy::log::debug!(
-            "Left key pressed, values: \n\tmd: {move_direction}\n\td:{}",
-            *direction
-        )
-    } else if keyboard_input.any_pressed(MOVE_RIGHT_KEYS) {
-        bevy::log::debug!(
-            "Right key pressed, values: \n\tmd: {move_direction}\n\td: {}",
-            *direction
-        );
+    } else if right_keys_pressed {
         move_direction += Vec3::X;
-        *direction = Direction::R;
+    }
+
+    let frame_timer_finished = animation_config.frame_timer.finished();
+
+    // could move to another system
+    if left_keys_pressed && frame_timer_finished {
+        animation_config.sprite_indices = WALK_LEFT_INDICES;
+    } else if right_keys_pressed && frame_timer_finished {
+        animation_config.sprite_indices = WALK_RIGHT_INDICES;
+    }
+
+    if (left_keys_pressed || right_keys_pressed) && frame_timer_finished {
+        animation_config.frame_timer = AnimationConfig::timer_from_fps(animation_config.fps);
     }
 
     move_direction *= 90.;
@@ -232,7 +244,6 @@ fn flip_sprite_direction(mut query: Query<(&Direction, &mut Sprite), Changed<Dir
     for (direction, mut sprite) in &mut query {
         let flip_x = direction.should_flip_sprite();
         sprite.flip_x = flip_x;
-        dbg!(flip_x);
     }
 }
 
@@ -260,21 +271,5 @@ fn player_death(
         commands.entity(e.e).despawn();
         spawn_player.send(SpawnPlayerEvent);
         info!("Player died. {}", e.cause);
-    }
-}
-
-fn exec_animations(time: Res<Time>, mut query: Query<(&mut AnimationConfig, &mut TextureAtlas)>) {
-    for (mut config, mut atlas) in &mut query {
-        config.frame_timer.tick(time.delta());
-
-        if config.frame_timer.just_finished() {
-            match atlas.index == config.last_sprite {
-                true => atlas.index = config.first_sprite,
-                _ => {
-                    atlas.index += 1;
-                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
-                }
-            }
-        }
     }
 }

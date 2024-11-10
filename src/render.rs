@@ -42,3 +42,40 @@ pub mod camera {
         commands.spawn(camera);
     }
 }
+
+pub mod animate {
+    use bevy::{
+        app::{Plugin, Update},
+        prelude::{Query, Res, With},
+        sprite::TextureAtlas,
+        time::Time,
+    };
+
+    use crate::components::component::{Animatable, AnimationConfig};
+
+    pub struct AnimationPlugin;
+
+    impl Plugin for AnimationPlugin {
+        fn build(&self, app: &mut bevy::prelude::App) {
+            app.add_systems(Update, execute_animations);
+        }
+    }
+
+    fn execute_animations(
+        time: Res<Time>,
+        mut query: Query<(&mut AnimationConfig, &mut TextureAtlas), With<Animatable>>,
+    ) {
+        for (mut config, mut atlas) in &mut query {
+            config.frame_timer.tick(time.delta());
+
+            if config.frame_timer.just_finished() {
+                if atlas.index >= config.sprite_indices.last_sprite {
+                    atlas.index = config.sprite_indices.first_sprite;
+                } else {
+                    atlas.index += 1;
+                    config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+                }
+            }
+        }
+    }
+}

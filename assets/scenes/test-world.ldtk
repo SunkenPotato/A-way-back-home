@@ -359,22 +359,22 @@
 	], "tilesets": [
 		{
 			"__cWid": 3,
-			"__cHei": 1,
+			"__cHei": 2,
 			"identifier": "ClaireWalk",
 			"uid": 1,
 			"relPath": "../sprites/player/claire-walk.png",
 			"embedAtlas": null,
-			"pxWid": 57,
-			"pxHei": 19,
+			"pxWid": 59,
+			"pxHei": 39,
 			"tileGridSize": 19,
-			"spacing": 0,
+			"spacing": 1,
 			"padding": 0,
 			"tags": [],
 			"tagsSourceEnumUid": null,
 			"enumTags": [],
 			"customData": [],
 			"savedSelections": [],
-			"cachedPixelData": { "opaqueTiles": "000", "averageColors": "898689868986" }
+			"cachedPixelData": { "opaqueTiles": "000000", "averageColors": "898689868986898689868986" }
 		},
 		{
 			"__cWid": 4,
