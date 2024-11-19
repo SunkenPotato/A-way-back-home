@@ -1,12 +1,12 @@
 #![allow(unused_parens)]
 #![deny(unsafe_code, reason = "This should be a safe program")]
-#![deny(unused_imports, reason = "Don't forget me")]
 #![forbid(clippy::panic, reason = "Use FatalErrors instead")]
 
 pub mod components;
 pub mod entity;
 pub mod error;
 pub mod macros;
+pub mod menu;
 pub mod player;
 pub mod render;
 pub mod util;
@@ -22,6 +22,7 @@ use bevy_ecs_ldtk::LdtkPlugin;
 use bevy_tnua::prelude::TnuaControllerPlugin;
 use bevy_tnua_avian2d::TnuaAvian2dPlugin;
 use entity::health::HealthPlugin;
+use menu::bindings::KeybindPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -47,6 +48,7 @@ fn main() {
     .add_plugins(world::loader::WorldPlugin)
     .add_plugins(HealthPlugin)
     .add_plugins(LdtkPlugin)
+    .add_plugins(KeybindPlugin)
     .add_plugins(render::animate::AnimationPlugin)
     .insert_resource(Gravity(Vec2::NEG_Y * 9.81 * 100.));
 

@@ -4,6 +4,7 @@ use std::fmt::Display;
 use avian2d::prelude::{Collider, RigidBody};
 use bevy::{
     app::{Plugin, Update},
+    asset::Handle,
     input::ButtonInput,
     log::info,
     math::{IVec2, Vec3},
@@ -11,12 +12,12 @@ use bevy::{
         Bundle, Changed, Commands, Component, Entity, Event, EventReader, EventWriter,
         IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform, With,
     },
-    sprite::Sprite,
     utils::default,
 };
 use bevy_ecs_ldtk::{
     app::{LdtkEntity, LdtkEntityAppExt},
-    GridCoords, LdtkSpriteSheetBundle,
+    assets::LdtkProject,
+    GridCoords, LdtkSpriteSheetBundle, Respawn,
 };
 use bevy_tnua::prelude::{TnuaBuiltinJump, TnuaBuiltinWalk, TnuaController, TnuaControllerBundle};
 
@@ -40,7 +41,7 @@ const MOVE_RIGHT_KEYS: [KeyCode; 2] = [KeyCode::KeyD, KeyCode::ArrowRight];
 const AIR_ACCELERATION: f32 = 700.;
 const ACCELERATION: f32 = 1600.;
 
-const ANIMATION_FPS: u8 = 10;
+const ANIMATION_FPS: u8 = 18;
 const WALK_RIGHT_INDICES: SpriteIndices = SpriteIndices::new(0, 2);
 const WALK_LEFT_INDICES: SpriteIndices = SpriteIndices::new(3, 5);
 
@@ -55,22 +56,20 @@ impl Plugin for PlayerPlugin {
 
         app.add_systems(
             Update,
-            (
-                logic_move_controller,
-                visual_move_controller,
-                flip_sprite_direction,
-            )
-                .chain(),
+            (logic_move_controller, visual_move_controller).chain(),
         );
 
-        app.add_systems(Update, (player_void_death, player_death).chain());
+        app.add_systems(
+            Update,
+            (player_void_death, player_death, respawn_player).chain(),
+        );
 
         app.register_ldtk_entity::<PlayerBundle>("Player");
     }
 }
 
-pub enum AnimationState {
-    Standing,
+#[derive(Clone, Copy, Component)]
+pub enum MovementState {
     Moving(f32),
     Jumping,
 }
@@ -83,16 +82,6 @@ pub enum Direction {
     L,
     #[default]
     R,
-}
-
-impl Direction {
-    /// Returns whether the sprite should be flipped, reliant on the basis that the sprites are originally drawn facing right.
-    fn should_flip_sprite(&self) -> bool {
-        match self {
-            Direction::R => false,
-            _ => true,
-        }
-    }
 }
 
 impl Display for Direction {
@@ -130,6 +119,8 @@ struct PlayerBundle {
     controller: TnuaControllerBundle,
     direction: Direction,
     animatable: Animatable,
+    animation_state: MovementState,
+    health: Health,
 }
 
 impl LdtkEntity for PlayerBundle {
@@ -161,6 +152,8 @@ impl LdtkEntity for PlayerBundle {
             controller: TnuaControllerBundle::default(),
             direction: Direction::default(),
             animatable: Animatable,
+            animation_state: MovementState::Moving(0.),
+            health: Health::new(20.),
         }
     }
 }
@@ -239,20 +232,12 @@ fn logic_move_controller(mut query: Query<(&mut GridCoords, &Transform), Changed
     }
 }
 
-// Possibly move this to entity.rs
-fn flip_sprite_direction(mut query: Query<(&Direction, &mut Sprite), Changed<Direction>>) {
-    for (direction, mut sprite) in &mut query {
-        let flip_x = direction.should_flip_sprite();
-        sprite.flip_x = flip_x;
-    }
-}
-
 fn player_void_death(
     mut query: Query<(&Transform, &mut Health, Entity), With<Player>>,
     mut pdevent: EventWriter<PlayerDeath>,
 ) {
     for (transform, mut health, entity) in &mut query {
-        if transform.translation.y <= -200. {
+        if transform.translation.y <= -100. {
             health.current = 0.;
             pdevent.send(PlayerDeath {
                 e: entity,
@@ -271,5 +256,15 @@ fn player_death(
         commands.entity(e.e).despawn();
         spawn_player.send(SpawnPlayerEvent);
         info!("Player died. {}", e.cause);
+    }
+}
+
+fn respawn_player(
+    mut commands: Commands,
+    mut spawn_player: EventReader<SpawnPlayerEvent>,
+    ldtk_projects: Query<Entity, With<Handle<LdtkProject>>>,
+) {
+    for _ in spawn_player.read() {
+        commands.entity(ldtk_projects.single()).insert(Respawn);
     }
 }

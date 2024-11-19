@@ -16,13 +16,12 @@ pub mod loader {
     use bevy_ecs_ldtk::{
         app::{LdtkIntCell, LdtkIntCellAppExt},
         assets::{LdtkProject, LevelMetadataAccessor},
-        ldtk::{FieldInstance, FieldValue},
+        ldtk::{FieldInstance, FieldValue, Level},
         GridCoords, LdtkWorldBundle, LevelIid, LevelSelection,
     };
-    use strum_macros::EnumIter;
 
     use crate::{
-        error,
+        default_impl, error,
         player::{Player, SpawnPlayerEvent},
     };
 
@@ -30,11 +29,15 @@ pub mod loader {
     pub const GLOBAL_SCALE: Vec3 = Vec3::from_slice(&[3.5, 3.5, 0.]);
 
     const GRASS_INT_CELL: i32 = 1;
+    const BORDER_INT_CELL: i32 = 2;
 
     const SPAWNPOINT_IDENT: &'static str = "Spawnpoint";
 
     #[derive(Event, Deref)]
     pub struct ChangeLevel(usize);
+
+    #[derive(Resource, Deref)]
+    pub struct CurrentLevel(Option<Level>);
 
     impl Plugin for WorldPlugin {
         fn build(&self, app: &mut bevy::prelude::App) {
@@ -42,12 +45,15 @@ pub mod loader {
             app.add_systems(Update, set_level);
             app.add_event::<ChangeLevel>();
             app.register_ldtk_int_cell::<GrassTerrainBundle>(GRASS_INT_CELL);
+            app.register_ldtk_int_cell::<BorderWallBundle>(BORDER_INT_CELL);
 
             app.insert_resource(SpawnPoint(GridCoords::new(0, 0)));
 
             // remove!
             app.add_systems(Update, get_level_spawnpoint);
             app.add_systems(Update, transport_player_to_spawnpoint);
+
+            app.init_resource::<CurrentLevel>();
         }
     }
 
@@ -79,13 +85,16 @@ pub mod loader {
         projects: Query<&Handle<LdtkProject>>,
         assets: Res<Assets<LdtkProject>>,
         mut spawnpoint: ResMut<SpawnPoint>,
-        mut spawn_player: EventReader<SpawnPlayerEvent>,
+        mut prepare_spawnpoint: EventReader<SpawnPlayerEvent>,
+        mut level_resource: ResMut<CurrentLevel>, // doesn't fit, but it's not worth making another system for this at the moment
     ) {
-        for _ in spawn_player.read() {
+        for _ in prepare_spawnpoint.read() {
             for level_iid in &query {
                 let only_project = assets.get(projects.single()).expect("a project");
 
                 let level = only_project.get_raw_level_by_iid(level_iid.get()).unwrap();
+
+                *level_resource = CurrentLevel(Some(level.clone()));
 
                 let new_sp = match spawnpoint_from_fields(&level.field_instances) {
                     Ok(v) => v,
@@ -143,10 +152,20 @@ pub mod loader {
         rigid_body: RigidBody,
     }
 
-    #[derive(Resource, Deref)]
+    #[derive(Component, Default)]
+    pub struct BorderWall;
+
+    #[derive(Default, Bundle)]
+    struct BorderWallBundle {
+        marker: BorderWall,
+        collider: Collider,
+        rigid_body: RigidBody,
+    }
+
+    #[derive(Default, Bundle, Resource, Deref)]
     pub struct SpawnPoint(pub GridCoords);
 
-    #[derive(EnumIter, Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy)]
     pub enum SPError {
         InvalidFormat,
         EmptyInner,
@@ -209,6 +228,26 @@ pub mod loader {
             Self::new(collider, RigidBody::Static)
         }
     }
+
+    impl LdtkIntCell for BorderWallBundle {
+        fn bundle_int_cell(
+            _: bevy_ecs_ldtk::IntGridCell,
+            layer_instance: &bevy_ecs_ldtk::prelude::LayerInstance,
+        ) -> Self {
+            let collider = Collider::rectangle(
+                layer_instance.grid_size as f32,
+                layer_instance.grid_size as f32,
+            );
+
+            Self {
+                collider,
+                rigid_body: RigidBody::Static,
+                ..default()
+            }
+        }
+    }
+
+    default_impl!(CurrentLevel, Self(None));
 
     // END STRUCT
 }

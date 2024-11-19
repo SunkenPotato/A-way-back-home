@@ -54,11 +54,7 @@ pub mod component {
 
         use super::{AnimationConfig, Damage, Health, MovementMultiplier, SpriteIndices};
 
-        impl Default for MovementMultiplier {
-            fn default() -> Self {
-                Self(Vec3::from_slice(&[10., 1., 1.]))
-            }
-        }
+        crate::default_impl!(MovementMultiplier, Self(Vec3::from_slice(&[10., 1., 1.])));
 
         impl Deref for MovementMultiplier {
             type Target = Vec3;
@@ -147,6 +143,12 @@ pub mod component {
         }
 
         impl Health {
+            pub const fn new(amount: f32) -> Self {
+                Self {
+                    default: amount,
+                    current: amount,
+                }
+            }
             pub fn is_dead(&self) -> bool {
                 self.current < 0.
             }

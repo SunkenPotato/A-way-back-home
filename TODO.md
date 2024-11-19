@@ -3,14 +3,11 @@
 - Jumping <opt>
 
 2. Death
-- Screen / Reset 
+- Screen / Reset
 => Reset option taken, complete!
 
 3. Entities
 - AI, Spawning, Attacks
-
-4. Scenes
-- LDtk
 
 5. AUDIO
 - sounds are very interesting

@@ -17,11 +17,7 @@ pub mod health {
     #[derive(Resource)]
     pub struct VoidHeight(f32);
 
-    impl Default for VoidHeight {
-        fn default() -> Self {
-            Self(-300.)
-        }
-    }
+    crate::default_impl!(VoidHeight, Self(-300.));
 
     impl Deref for VoidHeight {
         type Target = f32;

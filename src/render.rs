@@ -13,24 +13,36 @@ pub fn window_plugin() -> bevy::window::WindowPlugin {
 
 pub mod camera {
     use bevy::{
-        app::{Plugin, Startup},
-        prelude::{Camera2dBundle, Commands, Query},
+        app::{Plugin, Startup, Update},
+        math::Vec3,
+        prelude::*,
+        time::Time,
         window::Window,
     };
 
-    use crate::{error, warn_fn};
+    use crate::{
+        error,
+        player::Player,
+        world::loader::{BorderWall, CurrentLevel},
+    };
 
     pub struct CameraPlugin;
+
+    const CAMERA_DECAY: f32 = 2.;
 
     impl Plugin for CameraPlugin {
         fn build(&self, app: &mut bevy::prelude::App) {
             app.add_systems(Startup, init_camera);
+            app.add_systems(Update, move_camera);
         }
     }
 
     /// Initialize the game camera
-    fn init_camera(mut commands: Commands, window: Query<&Window>) {
-        warn_fn!("TODO: Add dynamical position computation!");
+    fn init_camera(
+        mut commands: Commands,
+        window: Query<&Window>,
+        level: Option<Res<CurrentLevel>>,
+    ) {
         let Ok(window) = window.get_single() else {
             error::errors::WINDOWS_NOT_INSTANTIATED.exit_with_fatal_error()
         };
@@ -40,6 +52,38 @@ pub mod camera {
         camera.transform.translation.x += window.height() / 5.;
         camera.transform.translation.y += 105.;
         commands.spawn(camera);
+    }
+
+    fn move_camera(
+        player: Query<(&Transform), (Without<Camera>, Without<BorderWall>, With<Player>)>,
+        border_walls: Query<(&Transform), (Without<Player>, With<Camera>, With<BorderWall>)>,
+        mut camera: Query<&mut Transform, (Without<Player>, Without<BorderWall>, With<Camera>)>,
+        time: Res<Time>,
+    ) {
+        let Ok(mut camera_transform) = camera.get_single_mut() else {
+            return;
+        };
+
+        let Ok(player_transform) = player.get_single() else {
+            return;
+        };
+
+        if border_walls.iter().len() == 0 {
+            bevy::log::info!("border walls not fuond???")
+        }
+
+        if camera_transform
+            .translation
+            .distance(player_transform.translation)
+            > 20.
+        {
+            let Vec3 { x, y, .. } = player_transform.translation;
+            let direction = Vec3::new(x, y, camera_transform.translation.z);
+
+            camera_transform.translation = camera_transform
+                .translation
+                .lerp(direction, time.delta_seconds() * CAMERA_DECAY);
+        }
     }
 }
 
