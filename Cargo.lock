@@ -12,6 +12,7 @@ dependencies = [
  "bevy-tnua-avian2d",
  "bevy_ecs_ldtk",
  "derive_more 1.0.0",
+ "paste",
  "serde",
  "serde_json",
 ]
