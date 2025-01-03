@@ -1,11 +1,11 @@
 use avian2d::prelude::{Collider, RigidBody};
 use bevy::{
-    app::{Plugin, Startup, Update},
+    app::{Plugin, Update},
     input::ButtonInput,
     math::{Dir3, Vec3},
     prelude::{
-        Bundle, Camera2d, Component, IntoSystemConfigs, KeyCode, Query, Res, Resource, Single,
-        Transform, With, Without,
+        Bundle, Camera2d, Component, IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform,
+        With, Without,
     },
     sprite::Sprite,
     utils::default,
@@ -19,16 +19,14 @@ use bevy_tnua::{
     TnuaAnimatingState,
 };
 
-use crate::{
-    components::EntityDirection, render::animation::AnimationConfig, utils::spawn_default,
-};
+use crate::{components::EntityDirection, render::animation::AnimationConfig};
 
 static PLAYER_ID: &'static str = "Player";
 
 const PLAYER_DIM: (f32, f32) = (16., 28.);
 const MOVEMENT_FACTOR: f32 = 50.;
 const SPRINT_FACTOR: f32 = 3.;
-const FLOAT_HEIGHT: f32 = (PLAYER_DIM.0 / 2.) + 0.3;
+const FLOAT_HEIGHT: f32 = (PLAYER_DIM.1 / 2.) + 0.3;
 const ACCELERATION: f32 = 50.;
 const JUMP_HEIGHT: f32 = 4.;
 const RUNNING_MIN: f32 = 80.;
@@ -38,13 +36,12 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Startup, spawn_default::<Player>)
-            .add_systems(
-                Update,
-                (move_player, animate_player, camera_follow_player).chain(),
-            )
-            .init_resource::<PlayerAnimationPresets>()
-            .register_ldtk_entity::<PlayerBundle>(&PLAYER_ID);
+        app.add_systems(
+            Update,
+            (move_player, animate_player, camera_follow_player).chain(),
+        )
+        .init_resource::<PlayerAnimationPresets>()
+        .register_ldtk_entity::<PlayerBundle>(&PLAYER_ID);
     }
 }
 
@@ -206,8 +203,15 @@ fn animate_player(
 }
 
 fn camera_follow_player(
-    mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
-    player: Single<&Transform, (With<Player>, Without<Camera2d>)>,
+    mut camera: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+    player: Query<&Transform, (With<Player>, Without<Camera2d>)>,
 ) {
+    let Ok(mut camera) = camera.get_single_mut() else {
+        return;
+    };
+    let Ok(player) = player.get_single() else {
+        return;
+    };
+
     camera.translation = player.translation;
 }

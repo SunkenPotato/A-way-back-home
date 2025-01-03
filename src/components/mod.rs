@@ -23,7 +23,7 @@ fn flip_sprite(mut query: Query<(&mut Sprite, &EntityDirection), Changed<EntityD
     for (mut sprite, direction) in &mut query {
         match direction {
             EntityDirection::L => sprite.flip_x = true,
-            EntityDirection::R => sprite.flip_y = false,
+            EntityDirection::R => sprite.flip_x = false,
         }
     }
 }

@@ -7,7 +7,7 @@ pub mod render;
 pub mod utils;
 pub mod world;
 
-use avian2d::{prelude::PhysicsDebugPlugin, PhysicsPlugins};
+use avian2d::PhysicsPlugins;
 use bevy::{
     app::{App, FixedUpdate},
     prelude::{ImagePlugin, PluginGroup},
@@ -33,7 +33,7 @@ fn main() {
             TnuaAvian2dPlugin::new(FixedUpdate),
             PhysicsPlugins::new(FixedUpdate),
             #[cfg(debug_assertions)]
-            PhysicsDebugPlugin::default(),
+            avian2d::prelude::PhysicsDebugPlugin::default(),
         ))
         .run();
 }
