@@ -1,8 +1,0 @@
-People who helped a lot:
-
-epxzzy
-Alice
-
-Open source Programs / libraries:
-LDtk
-Aseprite
