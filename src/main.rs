@@ -1,5 +1,6 @@
 #![allow(unused_parens)]
 
+pub mod components;
 pub mod macros;
 pub mod player;
 pub mod render;
@@ -14,6 +15,7 @@ use bevy::{
 use bevy_ecs_ldtk::LdtkPlugin;
 use bevy_tnua::prelude::TnuaControllerPlugin;
 use bevy_tnua_avian2d::TnuaAvian2dPlugin;
+use components::ComponentPlugin;
 use player::PlayerPlugin;
 use render::RenderPlugins;
 use world::WorldPlugins;
@@ -25,6 +27,7 @@ fn main() {
         .add_plugins(RenderPlugins)
         .add_plugins(WorldPlugins)
         .add_plugins(PlayerPlugin)
+        .add_plugins(ComponentPlugin)
         .add_plugins((
             TnuaControllerPlugin::new(FixedUpdate),
             TnuaAvian2dPlugin::new(FixedUpdate),

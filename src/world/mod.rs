@@ -2,6 +2,7 @@ use avian2d::prelude::{Collider, Gravity, RigidBody};
 use bevy::{
     app::{plugin_group, Plugin, Startup},
     asset::AssetServer,
+    math::Vec2,
     prelude::{Bundle, Commands, Component, Res},
     utils::default,
 };
@@ -14,6 +15,8 @@ use crate::impl_intcell;
 
 static WORLD_PATH: &'static str = "world.ldtk";
 
+pub const GRAVITY: Gravity = Gravity(Vec2::new(0., -98.1));
+
 plugin_group! {
     pub struct WorldPlugins {
         :BasePlugin,
@@ -25,10 +28,8 @@ struct BasePlugin;
 
 impl Plugin for BasePlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        let gravity = Gravity::default();
-
         app.insert_resource(LevelSelection::index(0))
-            .insert_resource(gravity)
+            .insert_resource(GRAVITY)
             .register_ldtk_int_cell::<GrassTerrainBundle>(GrassTerrainBundle::INTCELL_ID)
             .add_systems(Startup, spawn_world);
     }
