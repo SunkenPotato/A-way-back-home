@@ -4,8 +4,8 @@ use bevy::{
     input::ButtonInput,
     math::{Dir3, Vec3},
     prelude::{
-        Bundle, Camera2d, Component, IntoSystemConfigs, KeyCode, Query, Res, Resource, Transform,
-        With, Without,
+        resource_equals, Bundle, Camera2d, Component, IntoSystemConfigs, KeyCode, Query, Res,
+        ResMut, Resource, Transform, With, Without,
     },
     sprite::Sprite,
     utils::default,
@@ -40,6 +40,11 @@ impl Plugin for PlayerPlugin {
             Update,
             (move_player, animate_player, camera_follow_player).chain(),
         )
+        .add_systems(
+            Update,
+            fix_player_z.run_if(resource_equals(PlayerZUpdated(false))),
+        )
+        .init_resource::<PlayerZUpdated>()
         .init_resource::<PlayerAnimationPresets>()
         .register_ldtk_entity::<PlayerBundle>(&PLAYER_ID);
     }
@@ -213,5 +218,19 @@ fn camera_follow_player(
         return;
     };
 
-    camera.translation = player.translation;
+    camera.translation.x = player.translation.x;
+    camera.translation.y = player.translation.y;
+}
+
+#[derive(Resource, Default, PartialEq)]
+struct PlayerZUpdated(bool);
+fn fix_player_z(
+    mut player: Query<(&mut Transform), With<Player>>,
+    mut cond: ResMut<PlayerZUpdated>,
+) {
+    let Ok(mut transform) = player.get_single_mut() else {
+        return;
+    };
+    cond.0 = true;
+    transform.translation.z = 0.;
 }

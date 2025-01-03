@@ -11,6 +11,8 @@ use avian2d::PhysicsPlugins;
 use bevy::{
     app::{App, FixedUpdate},
     prelude::{ImagePlugin, PluginGroup},
+    utils::default,
+    window::{Window, WindowPlugin},
 };
 use bevy_ecs_ldtk::LdtkPlugin;
 use bevy_tnua::prelude::TnuaControllerPlugin;
@@ -22,7 +24,20 @@ use world::WorldPlugins;
 
 fn main() {
     App::new()
-        .add_plugins(bevy::DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            bevy::DefaultPlugins
+                .set(ImagePlugin::default_nearest())
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        mode: bevy::window::WindowMode::BorderlessFullscreen(
+                            bevy::window::MonitorSelection::Primary,
+                        ),
+                        resizable: true,
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_plugins(LdtkPlugin)
         .add_plugins(RenderPlugins)
         .add_plugins(WorldPlugins)
