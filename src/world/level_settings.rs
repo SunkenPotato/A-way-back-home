@@ -8,6 +8,7 @@ use bevy_ecs_ldtk::{
     ldtk::{FieldInstance, FieldValue},
     LdtkProjectHandle, LevelSelection,
 };
+use derive_more::derive::Deref;
 
 trait FromFieldInstances: FromFieldValue {
     const IDENTIFIER: &'static str;
@@ -39,7 +40,7 @@ impl LevelSettings {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq, Eq, Deref)]
 pub struct CameraFollow(pub bool);
 impl FromFieldInstances for CameraFollow {
     const IDENTIFIER: &'static str = "CameraFollow";

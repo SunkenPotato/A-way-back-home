@@ -4,8 +4,8 @@ use bevy::{
     input::ButtonInput,
     math::{Dir3, Vec3},
     prelude::{
-        resource_equals, Bundle, Camera2d, Component, IntoSystemConfigs, KeyCode, Query, Res,
-        ResMut, Resource, Transform, With, Without,
+        Bundle, Camera2d, Component, Event, EventReader, IntoSystemConfigs, KeyCode, Query, Res,
+        Resource, Transform, With, Without,
     },
     sprite::Sprite,
     utils::default,
@@ -19,7 +19,10 @@ use bevy_tnua::{
     TnuaAnimatingState,
 };
 
-use crate::{components::EntityDirection, render::animation::AnimationConfig};
+use crate::{
+    components::EntityDirection, render::animation::AnimationConfig,
+    world::level_settings::LevelSettings,
+};
 
 static PLAYER_ID: &'static str = "Player";
 
@@ -38,8 +41,12 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_systems(
             Update,
-            (move_player, animate_player, camera_follow_player).chain(),
+            (
+                sync_camera_with_player,
+                (move_player, animate_player, camera_follow_player).chain(),
+            ),
         )
+        .add_event::<SyncCameraWithPlayer>()
         .init_resource::<PlayerAnimationPresets>()
         .register_ldtk_entity::<PlayerBundle>(&PLAYER_ID);
     }
@@ -208,7 +215,13 @@ fn animate_player(
 fn camera_follow_player(
     mut camera: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
     player: Query<&Transform, (With<Player>, Without<Camera2d>)>,
+    level_settings: Res<LevelSettings>,
 ) {
+    if *level_settings.camera_follow == false {
+        // if the level asks us for the camera to stay put, it'll do so.
+        return;
+    }
+
     let Ok(mut camera) = camera.get_single_mut() else {
         return;
     };
@@ -218,4 +231,28 @@ fn camera_follow_player(
 
     camera.translation.x = player.translation.x;
     camera.translation.y = player.translation.y;
+}
+
+#[derive(Event, Default)]
+pub struct SyncCameraWithPlayer;
+
+// For level changes
+fn sync_camera_with_player(
+    mut event_reader: EventReader<SyncCameraWithPlayer>,
+    mut camera: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+    player: Query<&Transform, (With<Player>, Without<Camera2d>)>,
+) {
+    let Ok(mut camera) = camera.get_single_mut() else {
+        println!("NO CAMERA???");
+        return;
+    };
+    let Ok(player) = player.get_single() else {
+        println!("no player???");
+        return;
+    };
+
+    for _ in event_reader.read() {
+        camera.translation.x = player.translation.x;
+        camera.translation.y = player.translation.y;
+    }
 }
