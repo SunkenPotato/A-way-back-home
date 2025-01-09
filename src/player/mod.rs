@@ -40,11 +40,6 @@ impl Plugin for PlayerPlugin {
             Update,
             (move_player, animate_player, camera_follow_player).chain(),
         )
-        .add_systems(
-            Update,
-            fix_player_z.run_if(resource_equals(PlayerZUpdated(false))),
-        )
-        .init_resource::<PlayerZUpdated>()
         .init_resource::<PlayerAnimationPresets>()
         .register_ldtk_entity::<PlayerBundle>(&PLAYER_ID);
     }
@@ -123,10 +118,10 @@ impl LdtkEntity for PlayerBundle {
 }
 
 fn move_player(
-    mut controller: Query<(&mut TnuaController, &mut EntityDirection), With<Player>>,
+    mut controller: Query<(&mut TnuaController, &mut EntityDirection, &Transform), With<Player>>,
     keyboard: Res<ButtonInput<KeyCode>>,
 ) {
-    let Ok((mut controller, mut direction)) = controller.get_single_mut() else {
+    let Ok((mut controller, mut direction, transform)) = controller.get_single_mut() else {
         return;
     };
 
@@ -144,8 +139,11 @@ fn move_player(
         direction_v *= SPRINT_FACTOR;
     }
 
+    direction_v *= MOVEMENT_FACTOR;
+    direction_v.z = transform.translation.z;
+
     controller.basis(TnuaBuiltinWalk {
-        desired_velocity: direction_v * MOVEMENT_FACTOR,
+        desired_velocity: direction_v,
         desired_forward: Dir3::new(direction_v).ok(),
         float_height: FLOAT_HEIGHT,
         acceleration: ACCELERATION,
@@ -220,17 +218,4 @@ fn camera_follow_player(
 
     camera.translation.x = player.translation.x;
     camera.translation.y = player.translation.y;
-}
-
-#[derive(Resource, Default, PartialEq)]
-struct PlayerZUpdated(bool);
-fn fix_player_z(
-    mut player: Query<(&mut Transform), With<Player>>,
-    mut cond: ResMut<PlayerZUpdated>,
-) {
-    let Ok(mut transform) = player.get_single_mut() else {
-        return;
-    };
-    cond.0 = true;
-    transform.translation.z = 0.;
 }

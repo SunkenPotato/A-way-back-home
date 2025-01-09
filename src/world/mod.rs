@@ -20,6 +20,9 @@ static WORLD_PATH: &'static str = "world.ldtk";
 
 pub const GRAVITY: Gravity = Gravity(Vec2::new(0., -98.1));
 
+// TODO: remove
+const FIRST_LEVEL: &'static str = "977043b0-c210-11ef-82b1-d58aa0d63a63";
+
 plugin_group! {
     pub struct WorldPlugins {
         :BasePlugin,
@@ -31,16 +34,12 @@ struct BasePlugin;
 
 impl Plugin for BasePlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.insert_resource(LevelSelection::iid("977043b0-c210-11ef-82b1-d58aa0d63a63"))
+        app.insert_resource(LevelSelection::iid(FIRST_LEVEL))
             .insert_resource(GRAVITY)
             .init_resource::<LevelSettings>()
             .add_event::<ChangeLevel>()
             .register_ldtk_int_cell::<GrassTerrainBundle>(GrassTerrainBundle::INTCELL_ID)
             .add_systems(Update, (change_level, update_level_settings).chain())
-            //#[cfg(debug_assertions)]
-            .add_systems(Update, |l: Res<LevelSettings>| {
-                dbg!(&l);
-            })
             .add_systems(Startup, spawn_world);
     }
 }
