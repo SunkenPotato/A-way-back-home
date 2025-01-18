@@ -46,10 +46,7 @@ impl Plugin for BasePlugin {
             .register_ldtk_entity::<LevelGoalBundle>()
             .add_systems(
                 Update,
-                (
-                    (change_level, update_level_settings).chain(),
-                    level::transition_level,
-                ),
+                ((change_level, level::transition_level, update_level_settings).chain()),
             )
             .add_systems(Startup, spawn_world);
     }

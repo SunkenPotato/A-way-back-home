@@ -1,6 +1,9 @@
 use bevy::{
     log::warn,
-    prelude::{Bundle, Component, Event, EventReader, EventWriter, Query, ResMut, With},
+    prelude::{
+        Bundle, Component, DetectChanges, Event, EventReader, EventWriter, Local, Query, Res,
+        ResMut, With,
+    },
     sprite::Sprite,
 };
 use bevy_ecs_ldtk::{GridCoords, LdtkEntity, LevelSelection};
@@ -44,35 +47,41 @@ pub(super) fn change_level(
     mut level_selection: ResMut<LevelSelection>,
     mut event_writer: EventWriter<SyncCameraWithPlayer>,
 ) {
-    for level in event_reader.read() {
-        let LevelSelection::Indices(indices) = level_selection.as_ref() else {
-            warn!("LevelSelection should be of `Indices` form");
-            return;
-        };
+    let Some(level) = event_reader.read().last() else {
+        return;
+    };
 
-        let new_level = match level {
-            ChangeLevel::Next => LevelSelection::index(indices.level + 1),
-            ChangeLevel::Level(inner) => inner.clone(),
-        };
-        *level_selection = new_level;
-        event_writer.send_default();
-    }
+    let LevelSelection::Indices(indices) = level_selection.as_ref() else {
+        warn!("LevelSelection should be of `Indices` form");
+        return;
+    };
+
+    let new_level = match level {
+        ChangeLevel::Next => LevelSelection::index(indices.level + 1),
+        ChangeLevel::Level(inner) => inner.clone(),
+    };
+
+    *level_selection = new_level;
+    event_writer.send_default();
 }
 
 // Reminder: change level_goal to Option<T> possibly.
 pub(super) fn transition_level(
     player: Query<&GridCoords, With<Player>>,
     level_goal: Query<&GridCoords, With<LevelGoal>>, // could be cached
+    level_selection: Res<LevelSelection>,
     mut change_level: EventWriter<ChangeLevel>,
+    mut sent_once: Local<bool>,
 ) {
+    *sent_once = !level_selection.is_changed();
     query_as_single!(player; player);
     query_as_single!(level_goal; level_goal);
 
     let player = GridCoords::new(player.x, player.y - 1); // because the player doesn't fit on the normal grid
 
-    if &player != level_goal {
+    if &player != level_goal || !*sent_once {
         return;
     }
-    println!("changing");
     change_level.send_default();
+    *sent_once = true;
 }

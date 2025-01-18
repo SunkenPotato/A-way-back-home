@@ -68,8 +68,8 @@ pub(super) fn update_level_settings(
     let project: &LdtkProject = projects.get(&handle.handle).expect("project should exist");
 
     let level = match *level_selection {
-        LevelSelection::Indices(ref idx) => project.get_raw_level_at_indices(&idx),
-        LevelSelection::Iid(ref iid) => project.get_raw_level_by_iid(iid.get()),
+        LevelSelection::Indices(ref idx) => project.get_raw_level_at_indices(dbg!(&idx)),
+        LevelSelection::Iid(ref iid) => project.get_raw_level_by_iid(dbg!(iid.get())),
         _ => todo!(),
     }
     .expect("level should exist");
