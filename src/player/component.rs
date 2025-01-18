@@ -9,7 +9,7 @@ use bevy_tnua::{prelude::TnuaController, TnuaAnimatingState};
 
 use crate::{components::EntityDirection, render::animation::AnimationConfig};
 
-pub(super) const PLAYER_DIM: (f32, f32) = (16., 28.);
+pub const PLAYER_DIM: (f32, f32) = (16., 28.);
 
 #[derive(Component, Default)]
 pub struct Player;

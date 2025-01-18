@@ -1,3 +1,4 @@
+pub use component::{Player, PLAYER_DIM};
 pub use movement::SyncCameraWithPlayer;
 
 mod component;

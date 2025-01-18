@@ -1,11 +1,11 @@
 use bevy::{
     asset::Assets,
-    log::error,
     prelude::{DetectChanges, Res, ResMut, Resource, Single},
 };
 use bevy_ecs_ldtk::{
     assets::{LdtkProject, LevelMetadataAccessor},
     ldtk::{FieldInstance, FieldValue},
+    prelude::RawLevelAccessor,
     LdtkProjectHandle, LevelSelection,
 };
 use derive_more::derive::Deref;
@@ -67,14 +67,12 @@ pub(super) fn update_level_settings(
 
     let project: &LdtkProject = projects.get(&handle.handle).expect("project should exist");
 
-    let LevelSelection::Iid(ref iid) = *level_selection else {
-        error!("Level identifier should be of IID form");
-        return;
-    };
-
-    let level = project
-        .get_raw_level_by_iid(iid.get())
-        .expect("level should exist as per inserted iid");
+    let level = match *level_selection {
+        LevelSelection::Indices(ref idx) => project.get_raw_level_at_indices(&idx),
+        LevelSelection::Iid(ref iid) => project.get_raw_level_by_iid(iid.get()),
+        _ => todo!(),
+    }
+    .expect("level should exist");
 
     *level_settings = LevelSettings::from_field_instances(&level.field_instances);
 }
