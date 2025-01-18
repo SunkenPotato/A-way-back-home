@@ -50,5 +50,9 @@ fn main() {
             #[cfg(debug_assertions)]
             avian2d::prelude::PhysicsDebugPlugin::default(),
         ))
+        .add_plugins({
+            #[cfg(debug_assertions)]
+            bevy_inspector_egui::quick::WorldInspectorPlugin::new()
+        })
         .run();
 }

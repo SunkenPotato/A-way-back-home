@@ -2,7 +2,10 @@ use bevy::{
     input::ButtonInput,
     log::{error, warn},
     math::{Dir3, Vec3},
-    prelude::{Camera2d, Event, EventReader, KeyCode, Query, Res, Transform, With, Without},
+    prelude::{
+        Camera2d, Event, EventReader, GlobalTransform, KeyCode, Query, Res, Transform, With,
+        Without,
+    },
     utils::default,
 };
 use bevy_tnua::{
@@ -24,7 +27,7 @@ const MOVEMENT_FACTOR: f32 = 50.;
 const SPRINT_FACTOR: f32 = 3.;
 const FLOAT_HEIGHT: f32 = (PLAYER_DIM.1 / 2.) + 0.3;
 const ACCELERATION: f32 = 50.;
-const JUMP_HEIGHT: f32 = 4.;
+const JUMP_HEIGHT: f32 = 24.;
 const RUNNING_MIN: f32 = 80.;
 const WALKING_MIN: f32 = 0.1;
 
@@ -73,7 +76,7 @@ pub(super) fn move_player(
 
 pub(super) fn camera_follow_player(
     mut camera: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
-    player: Query<&Transform, (With<Player>, Without<Camera2d>)>,
+    player: Query<&GlobalTransform, (With<Player>, Without<Camera2d>)>,
     level_settings: Res<LevelSettings>,
 ) {
     if *level_settings.camera_follow == false {
@@ -90,8 +93,8 @@ pub(super) fn camera_follow_player(
         return;
     };
 
-    camera.translation.x = player.translation.x;
-    camera.translation.y = player.translation.y;
+    camera.translation.x = player.translation().x;
+    camera.translation.y = player.translation().y;
 }
 
 #[derive(Event, Default)]
